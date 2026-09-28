@@ -20,4 +20,15 @@ public interface ArticleMapper extends BaseMapper<Article> {
     ArticleDetailDTO selectArticleDetailById(@Param("id") Long id);
 
     int incrementViewCount(@Param("id") Long id);
+
+
+    List<ArticleCardDTO> selectArticleCardsByCategoryId(
+            @Param("categoryId") Long categoryId,
+            @Param("offset") long offset,
+            @Param("size") long size
+    );
+
+    long countPublishedArticlesByCategoryId(
+            @Param("categoryId") Long categoryId
+    );
 }

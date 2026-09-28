@@ -10,4 +10,10 @@ public interface ArticleService {
     PageResultDTO<ArticleCardDTO> listArticles(long current, long size);
 
     ArticleDetailDTO getArticleById(Long id);
+
+    PageResultDTO<ArticleCardDTO> listArticlesByCategoryId(
+            Long categoryId,
+            long current,
+            long size
+    );
 }
