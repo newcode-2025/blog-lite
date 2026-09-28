@@ -47,6 +47,14 @@
             <result property="name" column="tag_name"/>
         </collection>
     </resultMap>
+    <!-- 阅读量加1 -->
+    <update id="incrementViewCount">
+        UPDATE article
+        SET view_count = view_count + 1
+        WHERE id = #{id}
+          AND is_deleted = 0
+          AND status = 1
+    </update>
 
     <!-- 分页查询公开文章 -->
     <select id="selectArticleCards"

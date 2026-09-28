@@ -6,6 +6,7 @@ import com.example.bloglite.dto.PageResultDTO;
 import com.example.bloglite.mapper.ArticleMapper;
 import com.example.bloglite.service.ArticleService;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -43,12 +44,29 @@ public class ArticleServiceImpl implements ArticleService {
         return new PageResultDTO<>(records, count, current, size);
     }
 
+    @Transactional
     @Override
     public ArticleDetailDTO getArticleById(Long id) {
         if (id == null || id < 1) {
             return null;
         }
 
-        return articleMapper.selectArticleDetailById(id);
+        ArticleDetailDTO article =
+                articleMapper.selectArticleDetailById(id);
+
+        if (article == null) {
+            return null;
+        }
+
+        int rows = articleMapper.incrementViewCount(id);
+
+        if (rows > 0) {
+            long currentViewCount =
+                    article.getViewCount() == null ? 0 : article.getViewCount();
+
+            article.setViewCount(currentViewCount + 1);
+        }
+
+        return article;
     }
 }
