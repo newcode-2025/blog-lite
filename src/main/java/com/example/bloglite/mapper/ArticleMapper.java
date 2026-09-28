@@ -1,0 +1,21 @@
+package com.example.bloglite.mapper;
+
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.example.bloglite.dto.ArticleCardDTO;
+import com.example.bloglite.dto.ArticleDetailDTO;
+import com.example.bloglite.entity.Article;
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+
+import java.util.List;
+
+@Mapper
+public interface ArticleMapper extends BaseMapper<Article> {
+
+    List<ArticleCardDTO> selectArticleCards( @Param("offset") long offset,
+                                             @Param("size") long size);
+
+    long countPublishedArticles();
+
+    ArticleDetailDTO selectArticleDetailById(@Param("id") Long id);
+}
