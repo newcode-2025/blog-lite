@@ -1,0 +1,46 @@
+# Web 服务配置
+server:
+  port: 8081
+
+spring:
+  application:
+    name: blog-lite
+
+  # MySQL 数据源配置
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: "jdbc:mysql://127.0.0.1:3306/blog_lite?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true"
+    username: "${BLOG_DB_USERNAME:}"
+    password: "${BLOG_DB_PASSWORD:}"
+
+    # HikariCP 连接池配置
+    hikari:
+      minimum-idle: 2
+      maximum-pool-size: 10
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      connection-test-query: SELECT 1
+
+# MyBatis-Plus 配置
+mybatis-plus:
+  # XML Mapper 文件位置
+  mapper-locations: classpath*:/mapper/**/*.xml
+
+  # 实体类包路径
+  type-aliases-package: com.example.bloglite.entity
+
+  configuration:
+    # 数据库字段 user_name 自动映射到 Java 属性 userName
+    map-underscore-to-camel-case: true
+
+    # 在控制台打印执行的 SQL，方便学习和调试
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+  global-config:
+    # 关闭 MyBatis-Plus 启动 Banner
+    banner: false
+
+    db-config:
+      # 数据库主键使用 AUTO_INCREMENT，Java 使用 Long
+      id-type: auto
