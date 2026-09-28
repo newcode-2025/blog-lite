@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.bloglite.mapper.CategoryMapper">
+
+    <select id="selectCategories"
+            resultType="com.example.bloglite.dto.CategoryDTO">
+
+        SELECT
+            c.id,
+            c.name,
+            c.sort_order,
+            COUNT(a.id) AS article_count
+        FROM category c
+                 LEFT JOIN article a
+                           ON a.category_id = c.id
+                               AND a.is_deleted = 0
+                               AND a.status = 1
+        GROUP BY
+            c.id,
+            c.name,
+            c.sort_order
+        ORDER BY
+            c.sort_order ASC,
+            c.id ASC
+    </select>
+
+</mapper>
