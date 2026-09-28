@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.bloglite.mapper.TagMapper">
+
+    <select id="selectTagList"
+            resultType="com.example.bloglite.dto.TagListItemDTO">
+
+        SELECT
+            t.id,
+            t.name,
+            COUNT(a.id) AS article_count
+        FROM tag t
+                 LEFT JOIN article_tag art_tag
+                           ON art_tag.tag_id = t.id
+                 LEFT JOIN article a
+                           ON a.id = art_tag.article_id
+                               AND a.is_deleted = 0
+                               AND a.status = 1
+        GROUP BY
+            t.id,
+            t.name
+        ORDER BY
+            t.id ASC
+    </select>
+
+</mapper>
