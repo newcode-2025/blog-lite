@@ -16,4 +16,10 @@ public interface ArticleService {
             long current,
             long size
     );
+
+    PageResultDTO<ArticleCardDTO> listArticlesByTagId(
+            Long tagId,
+            long current,
+            long size
+    );
 }

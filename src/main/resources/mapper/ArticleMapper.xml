@@ -166,5 +166,59 @@
           AND a.is_deleted = 0
           AND a.status = 1
     </select>
+    <!-- 分页查询指定标签下的公开文章 -->
+    <select id="selectArticleCardsByTagId"
+            resultMap="ArticleCardResultMap">
+
+        SELECT
+        a.id,
+        a.title,
+        a.summary,
+        a.cover_url,
+        a.is_top,
+        a.is_featured,
+        a.published_at,
+        c.name AS category_name,
+        t.id AS tag_id,
+        t.name AS tag_name
+        FROM article a
+
+        <!-- 只筛选指定标签的文章 -->
+        JOIN article_tag filter_tag
+        ON filter_tag.article_id = a.id
+        AND filter_tag.tag_id = #{tagId}
+
+        LEFT JOIN category c
+        ON c.id = a.category_id
+
+        <!-- 查询文章关联的全部标签 -->
+        LEFT JOIN article_tag art_tag
+        ON art_tag.article_id = a.id
+
+        LEFT JOIN tag t
+        ON t.id = art_tag.tag_id
+
+        WHERE a.is_deleted = 0
+        AND a.status = 1
+        ORDER BY
+        a.is_top DESC,
+        a.is_featured DESC,
+        a.published_at DESC,
+        a.id DESC
+        LIMIT #{offset}, #{size}
+    </select>
+
+    <!-- 查询指定标签下的公开文章总数 -->
+    <select id="countPublishedArticlesByTagId"
+            resultType="long">
+
+        SELECT COUNT(DISTINCT a.id)
+        FROM article a
+                 JOIN article_tag filter_tag
+                      ON filter_tag.article_id = a.id
+                          AND filter_tag.tag_id = #{tagId}
+        WHERE a.is_deleted = 0
+          AND a.status = 1
+    </select>
 
 </mapper>

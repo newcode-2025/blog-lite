@@ -116,4 +116,51 @@ public class ArticleServiceImpl implements ArticleService {
                 size
         );
     }
+
+    @Override
+    public PageResultDTO<ArticleCardDTO> listArticlesByTagId(
+            Long tagId,
+            long current,
+            long size
+    ) {
+        if (current < 1) {
+            current = 1;
+        }
+
+        if (size < 1) {
+            size = DEFAULT_SIZE;
+        }
+
+        if (size > MAX_SIZE) {
+            size = MAX_SIZE;
+        }
+
+        if (tagId == null || tagId < 1) {
+            return new PageResultDTO<>(
+                    List.of(),
+                    0L,
+                    current,
+                    size
+            );
+        }
+
+        long offset = (current - 1) * size;
+
+        List<ArticleCardDTO> records =
+                articleMapper.selectArticleCardsByTagId(
+                        tagId,
+                        offset,
+                        size
+                );
+
+        long count =
+                articleMapper.countPublishedArticlesByTagId(tagId);
+
+        return new PageResultDTO<>(
+                records,
+                count,
+                current,
+                size
+        );
+    }
 }
