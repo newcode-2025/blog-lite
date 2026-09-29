@@ -7,8 +7,6 @@ import com.example.bloglite.dto.PageResultDTO;
 import com.example.bloglite.service.ArticleService;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-
 @RestController
 @RequestMapping("/api/v1/articles")
 public class ArticleController {
