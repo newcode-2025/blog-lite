@@ -1,8 +1,11 @@
 package com.example.bloglite.service;
 
+import com.example.bloglite.dto.ArchiveDTO;
 import com.example.bloglite.dto.ArticleCardDTO;
 import com.example.bloglite.dto.ArticleDetailDTO;
 import com.example.bloglite.dto.PageResultDTO;
+
+import java.util.List;
 
 
 public interface ArticleService {
@@ -22,4 +25,6 @@ public interface ArticleService {
             long current,
             long size
     );
+
+    List<ArchiveDTO> listArchives();
 }

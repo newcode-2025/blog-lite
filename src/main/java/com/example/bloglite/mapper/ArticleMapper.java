@@ -39,4 +39,6 @@ public interface ArticleMapper extends BaseMapper<Article> {
     );
 
     long countPublishedArticlesByTagId(@Param("tagId") Long tagId);
+
+    List<ArticleCardDTO> selectArchiveArticles();
 }

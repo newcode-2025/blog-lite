@@ -1,5 +1,6 @@
 package com.example.bloglite.service.impl;
 
+import com.example.bloglite.dto.ArchiveDTO;
 import com.example.bloglite.dto.ArticleCardDTO;
 import com.example.bloglite.dto.ArticleDetailDTO;
 import com.example.bloglite.dto.PageResultDTO;
@@ -8,7 +9,11 @@ import com.example.bloglite.service.ArticleService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.YearMonth;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class ArticleServiceImpl implements ArticleService {
@@ -162,5 +167,41 @@ public class ArticleServiceImpl implements ArticleService {
                 current,
                 size
         );
+    }
+
+    @Override
+    public List<ArchiveDTO> listArchives() {
+        List<ArticleCardDTO> articles =
+                articleMapper.selectArchiveArticles();
+
+        Map<YearMonth, List<ArticleCardDTO>> grouped =
+                new LinkedHashMap<>();
+
+        for (ArticleCardDTO article : articles) {
+            if (article.getPublishedAt() == null) {
+                continue;
+            }
+
+            YearMonth yearMonth =
+                    YearMonth.from(article.getPublishedAt());
+
+            grouped.computeIfAbsent(
+                    yearMonth,
+                    key -> new ArrayList<>()
+            ).add(article);
+        }
+
+        return grouped.entrySet()
+                .stream()
+                .map(entry -> {
+                    YearMonth yearMonth = entry.getKey();
+
+                    return new ArchiveDTO(
+                            String.valueOf(yearMonth.getYear()),
+                            String.format("%02d", yearMonth.getMonthValue()),
+                            entry.getValue()
+                    );
+                })
+                .toList();
     }
 }
