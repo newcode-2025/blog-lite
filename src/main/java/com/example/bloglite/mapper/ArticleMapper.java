@@ -41,4 +41,12 @@ public interface ArticleMapper extends BaseMapper<Article> {
     long countPublishedArticlesByTagId(@Param("tagId") Long tagId);
 
     List<ArticleCardDTO> selectArchiveArticles();
+
+    List<ArticleCardDTO> searchArticleCards(
+            @Param("keywords") String keywords,
+            @Param("offset") long offset,
+            @Param("size") long size
+    );
+
+    long countSearchArticles(@Param("keywords") String keywords);
 }

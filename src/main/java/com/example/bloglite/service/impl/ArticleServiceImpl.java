@@ -204,4 +204,53 @@ public class ArticleServiceImpl implements ArticleService {
                 })
                 .toList();
     }
+
+    @Override
+    public PageResultDTO<ArticleCardDTO> searchArticles(
+            String keywords,
+            long current,
+            long size
+    ) {
+        if (current < 1) {
+            current = 1;
+        }
+
+        if (size < 1) {
+            size = DEFAULT_SIZE;
+        }
+
+        if (size > MAX_SIZE) {
+            size = MAX_SIZE;
+        }
+
+        String keyword = keywords == null ? "" : keywords.trim();
+
+        if (keyword.isEmpty()) {
+            return new PageResultDTO<>(
+                    List.of(),
+                    0L,
+                    current,
+                    size
+            );
+        }
+
+        long offset = (current - 1) * size;
+
+        List<ArticleCardDTO> records =
+                articleMapper.searchArticleCards(
+                        keyword,
+                        offset,
+                        size
+                );
+
+        long count =
+                articleMapper.countSearchArticles(keyword);
+
+        return new PageResultDTO<>(
+                records,
+                count,
+                current,
+                size
+        );
+    }
 }

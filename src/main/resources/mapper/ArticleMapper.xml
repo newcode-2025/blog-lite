@@ -248,4 +248,64 @@
             a.published_at DESC,
             a.id DESC
     </select>
+    <!-- 分页搜索公开文章 -->
+    <select id="searchArticleCards"
+            resultMap="ArticleCardResultMap">
+
+        SELECT
+            a.id,
+            a.title,
+            a.summary,
+            a.cover_url,
+            a.is_top,
+            a.is_featured,
+            a.published_at,
+            c.name AS category_name,
+            t.id AS tag_id,
+            t.name AS tag_name
+        FROM article a
+                 LEFT JOIN category c
+                           ON c.id = a.category_id
+                 LEFT JOIN article_tag art_tag
+                           ON art_tag.article_id = a.id
+                 LEFT JOIN tag t
+                           ON t.id = art_tag.tag_id
+        WHERE a.is_deleted = 0
+          AND a.status = 1
+          AND (
+            a.title LIKE CONCAT('%', #{keywords}, '%')
+                OR a.summary LIKE CONCAT('%', #{keywords}, '%')
+                OR a.content LIKE CONCAT('%', #{keywords}, '%')
+                OR c.name LIKE CONCAT('%', #{keywords}, '%')
+                OR t.name LIKE CONCAT('%', #{keywords}, '%')
+            )
+        ORDER BY
+            a.is_top DESC,
+            a.is_featured DESC,
+            a.published_at DESC,
+            a.id DESC
+            LIMIT #{offset}, #{size}
+    </select>
+    <!-- 搜索公开文章总数 -->
+    <select id="countSearchArticles"
+            resultType="long">
+
+        SELECT COUNT(DISTINCT a.id)
+        FROM article a
+                 LEFT JOIN category c
+                           ON c.id = a.category_id
+                 LEFT JOIN article_tag art_tag
+                           ON art_tag.article_id = a.id
+                 LEFT JOIN tag t
+                           ON t.id = art_tag.tag_id
+        WHERE a.is_deleted = 0
+          AND a.status = 1
+          AND (
+            a.title LIKE CONCAT('%', #{keywords}, '%')
+                OR a.summary LIKE CONCAT('%', #{keywords}, '%')
+                OR a.content LIKE CONCAT('%', #{keywords}, '%')
+                OR c.name LIKE CONCAT('%', #{keywords}, '%')
+                OR t.name LIKE CONCAT('%', #{keywords}, '%')
+            )
+    </select>
 </mapper>

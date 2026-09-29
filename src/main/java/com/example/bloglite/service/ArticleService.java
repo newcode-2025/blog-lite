@@ -27,4 +27,10 @@ public interface ArticleService {
     );
 
     List<ArchiveDTO> listArchives();
+
+    PageResultDTO<ArticleCardDTO> searchArticles(
+            String keywords,
+            long current,
+            long size
+    );
 }

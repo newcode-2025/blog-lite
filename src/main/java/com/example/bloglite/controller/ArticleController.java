@@ -41,4 +41,23 @@ public class ArticleController {
 
         return ApiResponse.success(article);
     }
+
+    /**
+     * 搜索公开文章
+     */
+    @GetMapping("/search")
+    public ApiResponse<PageResultDTO<ArticleCardDTO>> searchArticles(
+            @RequestParam(defaultValue = "") String keywords,
+            @RequestParam(defaultValue = "1") long current,
+            @RequestParam(defaultValue = "10") long size
+    ) {
+        PageResultDTO<ArticleCardDTO> page =
+                articleService.searchArticles(
+                        keywords,
+                        current,
+                        size
+                );
+
+        return ApiResponse.success(page);
+    }
 }
