@@ -4,10 +4,12 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.example.bloglite.dto.ArticleCommentDTO;
 import com.example.bloglite.dto.ArticleCommentListDTO;
+import com.example.bloglite.dto.ArticleCommentReviewDTO;
 import com.example.bloglite.dto.ArticleReplyDTO;
 import com.example.bloglite.dto.CreateCommentRequest;
 import com.example.bloglite.dto.CreateReplyRequest;
 import com.example.bloglite.dto.PageResultDTO;
+import com.example.bloglite.dto.ReviewCommentRequest;
 import com.example.bloglite.dto.UserDTO;
 import com.example.bloglite.entity.Article;
 import com.example.bloglite.entity.ArticleComment;
@@ -150,10 +152,6 @@ public class ArticleCommentServiceImpl
             throw new BizException(40000, "文章 ID 不正确");
         }
 
-        /*
-         * 评论列表属于公开接口，但仍然要先确认文章存在、
-         * 已发布且没有软删除。
-         */
         Article article = articleMapper.selectOne(
                 new LambdaQueryWrapper<Article>()
                         .eq(Article::getId, articleId)
@@ -208,10 +206,6 @@ public class ArticleCommentServiceImpl
 
         String content = normalizeContent(request.getContent());
 
-        /*
-         * targetComment 是用户实际点击回复的那条评论，
-         * 它可以是顶级评论，也可以是某条回复。
-         */
         ArticleComment targetComment =
                 articleCommentMapper.selectById(targetCommentId);
 
@@ -222,11 +216,6 @@ public class ArticleCommentServiceImpl
             );
         }
 
-        /*
-         * 所有回复都必须挂到顶级评论下面。
-         * 如果目标本身就是顶级评论，它就是所属顶级评论；
-         * 如果目标是一条回复，则继续查询它的顶级评论。
-         */
         ArticleComment rootComment =
                 targetComment.getParentId() == null
                         ? targetComment
@@ -242,9 +231,6 @@ public class ArticleCommentServiceImpl
             );
         }
 
-        /*
-         * 回复所属的文章也必须保持公开且未删除。
-         */
         Article article = articleMapper.selectOne(
                 new LambdaQueryWrapper<Article>()
                         .eq(
@@ -273,11 +259,6 @@ public class ArticleCommentServiceImpl
         reply.setArticleId(rootComment.getArticleId());
         reply.setUserId(currentUser.getId());
         reply.setParentId(rootComment.getId());
-
-        /*
-         * 记录实际被回复的用户。
-         * 回复回复时，仍然只保存顶级评论 ID，不形成三级结构。
-         */
         reply.setReplyToUserId(targetComment.getUserId());
         reply.setContent(content);
         reply.setStatus(ArticleCommentStatus.PENDING.getCode());
@@ -311,10 +292,6 @@ public class ArticleCommentServiceImpl
         ArticleComment rootComment =
                 articleCommentMapper.selectById(topLevelCommentId);
 
-        /*
-         * 回复列表的入口必须是一条审核通过的顶级评论，
-         * 不能把某条回复 ID 当成新的列表根节点。
-         */
         if (!isApprovedAndNotDeleted(rootComment)
                 || rootComment.getParentId() != null) {
             throw new BizException(40400, "评论不存在");
@@ -364,7 +341,7 @@ public class ArticleCommentServiceImpl
 
     @Transactional
     @Override
-    public void deleteOwnComment(Long commentId) {
+    public void deleteComment(Long commentId) {
         if (commentId == null || commentId < 1) {
             throw new BizException(40000, "评论 ID 不正确");
         }
@@ -378,18 +355,36 @@ public class ArticleCommentServiceImpl
             throw new BizException(40400, "评论不存在");
         }
 
-        // 本课只允许评论作者删除自己的评论
-        if (!currentUser.getId().equals(comment.getUserId())) {
+        boolean isCommentAuthor =
+                currentUser.getId().equals(comment.getUserId());
+
+        boolean isArticleAuthor = false;
+
+        if (!isCommentAuthor) {
+            Article article = articleMapper.selectById(
+                    comment.getArticleId()
+            );
+
+            if (article == null) {
+                throw new BizException(
+                        40400,
+                        "评论所属文章不存在"
+                );
+            }
+
+            isArticleAuthor =
+                    currentUser.getId().equals(
+                            article.getAuthorId()
+                    );
+        }
+
+        if (!isCommentAuthor && !isArticleAuthor) {
             throw new BizException(
                     40300,
-                    "无权删除他人的评论"
+                    "无权删除该评论"
             );
         }
 
-        /*
-         * 已经删除的评论再次删除时直接返回成功，
-         * 让 DELETE 操作具有稳定的幂等行为。
-         */
         if (isDeleted(comment)) {
             return;
         }
@@ -410,10 +405,6 @@ public class ArticleCommentServiceImpl
                 commentUpdateWrapper
         );
 
-        /*
-         * 影响行数大于 1 说明数据库主键或条件出现异常，
-         * 正常情况下按主键更新最多只会影响一行。
-         */
         if (affectedRows > 1) {
             throw new BizException(
                     50000,
@@ -421,10 +412,6 @@ public class ArticleCommentServiceImpl
             );
         }
 
-        /*
-         * 删除顶级评论时，同时软删除它下面的全部回复。
-         * 删除回复时，只删除回复自身。
-         */
         if (comment.getParentId() == null) {
             LambdaUpdateWrapper<ArticleComment> replyUpdateWrapper =
                     new LambdaUpdateWrapper<>();
@@ -452,6 +439,189 @@ public class ArticleCommentServiceImpl
                     replyUpdateWrapper
             );
         }
+    }
+
+    @Override
+    public PageResultDTO<ArticleCommentReviewDTO> listReviewComments(
+            Long articleId,
+            Integer status,
+            long current,
+            long size
+    ) {
+        if (articleId == null || articleId < 1) {
+            throw new BizException(40000, "文章 ID 不正确");
+        }
+
+        if (status == null) {
+            status = ArticleCommentStatus.PENDING.getCode();
+        }
+
+        if (!isValidStatus(status)) {
+            throw new BizException(40000, "评论状态不正确");
+        }
+
+        UserDTO currentUser = UserContext.getCurrentUser();
+
+        Article article = articleMapper.selectById(articleId);
+
+        if (article == null) {
+            throw new BizException(40400, "文章不存在");
+        }
+
+        if (!currentUser.getId().equals(article.getAuthorId())) {
+            throw new BizException(
+                    40300,
+                    "无权查看该文章的评论审核列表"
+            );
+        }
+
+        current = normalizeCurrent(current);
+        size = normalizeSize(size);
+
+        long offset = (current - 1) * size;
+
+        List<ArticleCommentReviewDTO> records =
+                articleCommentMapper.selectReviewComments(
+                        articleId,
+                        status,
+                        offset,
+                        size
+                );
+
+        long count =
+                articleCommentMapper.countReviewComments(
+                        articleId,
+                        status
+                );
+
+        return new PageResultDTO<>(
+                records,
+                count,
+                current,
+                size
+        );
+    }
+
+    @Override
+    public void reviewComment(
+            Long commentId,
+            ReviewCommentRequest request
+    ) {
+        if (commentId == null || commentId < 1) {
+            throw new BizException(40000, "评论 ID 不正确");
+        }
+
+        if (request == null || request.getStatus() == null) {
+            throw new BizException(40000, "审核状态不能为空");
+        }
+
+        Integer status = request.getStatus();
+
+        if (!isReviewResultStatus(status)) {
+            throw new BizException(
+                    40000,
+                    "审核状态只能是 1 或 2"
+            );
+        }
+
+        UserDTO currentUser = UserContext.getCurrentUser();
+
+        ArticleComment comment =
+                articleCommentMapper.selectById(commentId);
+
+        if (comment == null || isDeleted(comment)) {
+            throw new BizException(40400, "评论不存在");
+        }
+
+        Article article = articleMapper.selectById(
+                comment.getArticleId()
+        );
+
+        if (article == null) {
+            throw new BizException(
+                    40400,
+                    "评论所属文章不存在"
+            );
+        }
+
+        if (!currentUser.getId().equals(article.getAuthorId())) {
+            throw new BizException(
+                    40300,
+                    "无权审核该评论"
+            );
+        }
+
+        /*
+         * 回复要通过审核时，它所属的顶级评论必须已经通过审核。
+         * 否则回复虽然自身状态为已通过，仍然无法在公开列表展示。
+         */
+        if (status.equals(
+                ArticleCommentStatus.APPROVED.getCode()
+        ) && comment.getParentId() != null) {
+            ArticleComment rootComment =
+                    articleCommentMapper.selectById(
+                            comment.getParentId()
+                    );
+
+            if (!isApprovedAndNotDeleted(rootComment)
+                    || rootComment.getParentId() != null) {
+                throw new BizException(
+                        40900,
+                        "所属顶级评论尚未通过审核"
+                );
+            }
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+
+        LambdaUpdateWrapper<ArticleComment> updateWrapper =
+                new LambdaUpdateWrapper<>();
+
+        updateWrapper
+                .eq(ArticleComment::getId, commentId)
+                .eq(ArticleComment::getIsDeleted, NOT_DELETED)
+                .set(ArticleComment::getStatus, status)
+                .set(ArticleComment::getUpdatedAt, now);
+
+        int affectedRows = articleCommentMapper.update(
+                null,
+                updateWrapper
+        );
+
+        if (affectedRows > 1) {
+            throw new BizException(
+                    50000,
+                    "评论审核失败，请稍后重试"
+            );
+        }
+    }
+
+    /**
+     * 判断审核列表查询的状态是否合法
+     */
+    private boolean isValidStatus(Integer status) {
+        return Integer.valueOf(
+                ArticleCommentStatus.PENDING.getCode()
+        ).equals(status)
+                || Integer.valueOf(
+                ArticleCommentStatus.APPROVED.getCode()
+        ).equals(status)
+                || Integer.valueOf(
+                ArticleCommentStatus.REJECTED.getCode()
+        ).equals(status);
+    }
+
+    /**
+     * 判断是否为评论审核结果状态
+     * 只允许通过或拒绝，不允许重新设置为待审核
+     */
+    private boolean isReviewResultStatus(Integer status) {
+        return Integer.valueOf(
+                ArticleCommentStatus.APPROVED.getCode()
+        ).equals(status)
+                || Integer.valueOf(
+                ArticleCommentStatus.REJECTED.getCode()
+        ).equals(status);
     }
 
     /**

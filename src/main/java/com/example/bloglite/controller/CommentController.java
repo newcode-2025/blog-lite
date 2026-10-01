@@ -2,15 +2,18 @@ package com.example.bloglite.controller;
 
 import com.example.bloglite.common.ApiResponse;
 import com.example.bloglite.dto.ArticleCommentDTO;
+import com.example.bloglite.dto.ArticleCommentReviewDTO;
 import com.example.bloglite.dto.ArticleReplyDTO;
 import com.example.bloglite.dto.CreateReplyRequest;
 import com.example.bloglite.dto.PageResultDTO;
+import com.example.bloglite.dto.ReviewCommentRequest;
 import com.example.bloglite.service.ArticleCommentService;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -67,13 +70,53 @@ public class CommentController {
     }
 
     /**
-     * 删除当前用户自己的评论
+     * 删除评论
      */
     @DeleteMapping("/{commentId}")
-    public ApiResponse<Void> deleteOwnComment(
+    public ApiResponse<Void> deleteComment(
             @PathVariable("commentId") Long commentId
     ) {
-        articleCommentService.deleteOwnComment(commentId);
+        articleCommentService.deleteComment(commentId);
+
+        return ApiResponse.success(null);
+    }
+
+    /**
+     * 文章作者分页查询自己文章的评论审核列表
+     */
+    @GetMapping("/review")
+    public ApiResponse<PageResultDTO<ArticleCommentReviewDTO>>
+    listReviewComments(
+            @RequestParam("articleId") Long articleId,
+            @RequestParam(
+                    value = "status",
+                    required = false
+            ) Integer status,
+            @RequestParam(defaultValue = "1") long current,
+            @RequestParam(defaultValue = "10") long size
+    ) {
+        return ApiResponse.success(
+                articleCommentService.listReviewComments(
+                        articleId,
+                        status,
+                        current,
+                        size
+                )
+        );
+    }
+
+    /**
+     * 文章作者审核单条评论
+     */
+    @PutMapping("/{commentId}/status")
+    public ApiResponse<Void> reviewComment(
+            @PathVariable("commentId") Long commentId,
+            @Valid @RequestBody ReviewCommentRequest request
+    ) {
+        articleCommentService.reviewComment(
+                commentId,
+                request
+        );
 
         return ApiResponse.success(null);
     }

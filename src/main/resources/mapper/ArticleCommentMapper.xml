@@ -82,4 +82,45 @@
           AND c.is_deleted = 0
     </select>
 
+    <!-- 分页查询文章作者的评论审核列表 -->
+    <select id="selectReviewComments"
+            resultType="com.example.bloglite.dto.ArticleCommentReviewDTO">
+
+        SELECT
+            c.id,
+            c.article_id,
+            c.parent_id,
+            c.user_id,
+            u.nickname,
+            u.avatar_url,
+            c.reply_to_user_id,
+            reply_user.nickname AS reply_to_nickname,
+            c.content,
+            c.status,
+            c.created_at
+        FROM article_comment c
+                 JOIN user_account u
+                      ON u.id = c.user_id
+                 LEFT JOIN user_account reply_user
+                           ON reply_user.id = c.reply_to_user_id
+        WHERE c.article_id = #{articleId}
+          AND c.status = #{status}
+          AND c.is_deleted = 0
+        ORDER BY
+            c.created_at ASC,
+            c.id ASC
+            LIMIT #{offset}, #{size}
+    </select>
+
+    <!-- 查询文章作者的评论审核列表总数 -->
+    <select id="countReviewComments"
+            resultType="long">
+
+        SELECT COUNT(1)
+        FROM article_comment c
+        WHERE c.article_id = #{articleId}
+          AND c.status = #{status}
+          AND c.is_deleted = 0
+    </select>
+
 </mapper>
