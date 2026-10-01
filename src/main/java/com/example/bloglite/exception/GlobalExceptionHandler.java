@@ -7,10 +7,10 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 /**
  * 全局异常处理器
- * 统一处理 Controller 抛出的参数异常、业务异常和系统异常
  */
 @Slf4j
 @RestControllerAdvice
@@ -31,6 +31,20 @@ public class GlobalExceptionHandler {
                 .orElse("请求参数不正确");
 
         return ApiResponse.error(40000, message);
+    }
+
+    /**
+     * 处理请求参数类型错误
+     * 例如：/articles/abc 或 ?current=abc
+     */
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ApiResponse<Void> handleMethodArgumentTypeMismatchException(
+            MethodArgumentTypeMismatchException exception
+    ) {
+        return ApiResponse.error(
+                40000,
+                "参数 " + exception.getName() + " 类型不正确"
+        );
     }
 
     /**
@@ -56,7 +70,6 @@ public class GlobalExceptionHandler {
 
     /**
      * 处理数据库唯一索引冲突
-     * 用于 Service 查询之后、插入之前发生并发重复写入的兜底情况
      */
     @ExceptionHandler(DuplicateKeyException.class)
     public ApiResponse<Void> handleDuplicateKeyException(
@@ -80,10 +93,7 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(Exception.class)
     public ApiResponse<Void> handleException(Exception exception) {
-        // 系统异常需要记录完整堆栈，方便定位问题
         log.error("系统未处理异常", exception);
-
-        // 不把数据库、文件路径等内部信息返回给客户端
         return ApiResponse.error(50000, "系统繁忙，请稍后重试");
     }
 }

@@ -4,6 +4,7 @@ import com.example.bloglite.dto.ArchiveDTO;
 import com.example.bloglite.dto.ArticleCardDTO;
 import com.example.bloglite.dto.ArticleDetailDTO;
 import com.example.bloglite.dto.PageResultDTO;
+import com.example.bloglite.exception.BizException;
 import com.example.bloglite.mapper.ArticleMapper;
 import com.example.bloglite.service.ArticleService;
 import org.springframework.stereotype.Service;
@@ -15,19 +16,26 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * 文章阅读业务实现
+ */
 @Service
 public class ArticleServiceImpl implements ArticleService {
+
     private static final long DEFAULT_SIZE = 10;
     private static final long MAX_SIZE = 50;
 
     private final ArticleMapper articleMapper;
 
-    public ArticleServiceImpl(ArticleMapper articleMapper){
-        this.articleMapper=articleMapper;
+    public ArticleServiceImpl(ArticleMapper articleMapper) {
+        this.articleMapper = articleMapper;
     }
 
     @Override
-    public PageResultDTO<ArticleCardDTO> listArticles(long current,long size) {
+    public PageResultDTO<ArticleCardDTO> listArticles(
+            long current,
+            long size
+    ) {
         if (current < 1) {
             current = 1;
         }
@@ -46,28 +54,36 @@ public class ArticleServiceImpl implements ArticleService {
                 articleMapper.selectArticleCards(offset, size);
 
         long count = articleMapper.countPublishedArticles();
-        return new PageResultDTO<>(records, count, current, size);
+
+        return new PageResultDTO<>(
+                records,
+                count,
+                current,
+                size
+        );
     }
 
     @Transactional
     @Override
     public ArticleDetailDTO getArticleById(Long id) {
         if (id == null || id < 1) {
-            return null;
+            throw new BizException(40000, "文章 ID 不正确");
         }
 
         ArticleDetailDTO article =
                 articleMapper.selectArticleDetailById(id);
 
         if (article == null) {
-            return null;
+            throw new BizException(40400, "文章不存在");
         }
 
         int rows = articleMapper.incrementViewCount(id);
 
         if (rows > 0) {
             long currentViewCount =
-                    article.getViewCount() == null ? 0 : article.getViewCount();
+                    article.getViewCount() == null
+                            ? 0
+                            : article.getViewCount();
 
             article.setViewCount(currentViewCount + 1);
         }
@@ -198,7 +214,10 @@ public class ArticleServiceImpl implements ArticleService {
 
                     return new ArchiveDTO(
                             String.valueOf(yearMonth.getYear()),
-                            String.format("%02d", yearMonth.getMonthValue()),
+                            String.format(
+                                    "%02d",
+                                    yearMonth.getMonthValue()
+                            ),
                             entry.getValue()
                     );
                 })

@@ -5,17 +5,28 @@ import com.example.bloglite.dto.ArticleCardDTO;
 import com.example.bloglite.dto.ArticleDetailDTO;
 import com.example.bloglite.dto.PageResultDTO;
 import com.example.bloglite.service.ArticleService;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * 文章阅读接口
+ */
 @RestController
 @RequestMapping("/api/v1/articles")
 public class ArticleController {
+
     private final ArticleService articleService;
 
     public ArticleController(ArticleService articleService) {
         this.articleService = articleService;
     }
 
+    /**
+     * 分页查询公开文章
+     */
     @GetMapping
     public ApiResponse<PageResultDTO<ArticleCardDTO>> listArticles(
             @RequestParam(defaultValue = "1") long current,
@@ -27,16 +38,14 @@ public class ArticleController {
         return ApiResponse.success(page);
     }
 
+    /**
+     * 查询文章详情
+     */
     @GetMapping("/{id}")
     public ApiResponse<ArticleDetailDTO> getArticleById(
             @PathVariable Long id
     ) {
         ArticleDetailDTO article = articleService.getArticleById(id);
-
-        if (article == null) {
-            return ApiResponse.error("文章不存在");
-        }
-
         return ApiResponse.success(article);
     }
 
