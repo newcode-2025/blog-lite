@@ -1,6 +1,7 @@
 package com.example.bloglite.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.example.bloglite.dto.ArticleCommentDTO;
 import com.example.bloglite.dto.ArticleCommentListDTO;
 import com.example.bloglite.dto.ArticleReplyDTO;
@@ -17,6 +18,7 @@ import com.example.bloglite.mapper.ArticleMapper;
 import com.example.bloglite.service.ArticleCommentService;
 import com.example.bloglite.util.UserContext;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -37,6 +39,11 @@ public class ArticleCommentServiceImpl
      * 未删除
      */
     private static final int NOT_DELETED = 0;
+
+    /**
+     * 已软删除
+     */
+    private static final int DELETED = 1;
 
     /**
      * 评论内容最大长度
@@ -355,6 +362,98 @@ public class ArticleCommentServiceImpl
         );
     }
 
+    @Transactional
+    @Override
+    public void deleteOwnComment(Long commentId) {
+        if (commentId == null || commentId < 1) {
+            throw new BizException(40000, "评论 ID 不正确");
+        }
+
+        UserDTO currentUser = UserContext.getCurrentUser();
+
+        ArticleComment comment =
+                articleCommentMapper.selectById(commentId);
+
+        if (comment == null) {
+            throw new BizException(40400, "评论不存在");
+        }
+
+        // 本课只允许评论作者删除自己的评论
+        if (!currentUser.getId().equals(comment.getUserId())) {
+            throw new BizException(
+                    40300,
+                    "无权删除他人的评论"
+            );
+        }
+
+        /*
+         * 已经删除的评论再次删除时直接返回成功，
+         * 让 DELETE 操作具有稳定的幂等行为。
+         */
+        if (isDeleted(comment)) {
+            return;
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+
+        LambdaUpdateWrapper<ArticleComment> commentUpdateWrapper =
+                new LambdaUpdateWrapper<>();
+
+        commentUpdateWrapper
+                .eq(ArticleComment::getId, commentId)
+                .eq(ArticleComment::getIsDeleted, NOT_DELETED)
+                .set(ArticleComment::getIsDeleted, DELETED)
+                .set(ArticleComment::getUpdatedAt, now);
+
+        int affectedRows = articleCommentMapper.update(
+                null,
+                commentUpdateWrapper
+        );
+
+        /*
+         * 影响行数大于 1 说明数据库主键或条件出现异常，
+         * 正常情况下按主键更新最多只会影响一行。
+         */
+        if (affectedRows > 1) {
+            throw new BizException(
+                    50000,
+                    "删除评论失败，请稍后重试"
+            );
+        }
+
+        /*
+         * 删除顶级评论时，同时软删除它下面的全部回复。
+         * 删除回复时，只删除回复自身。
+         */
+        if (comment.getParentId() == null) {
+            LambdaUpdateWrapper<ArticleComment> replyUpdateWrapper =
+                    new LambdaUpdateWrapper<>();
+
+            replyUpdateWrapper
+                    .eq(
+                            ArticleComment::getParentId,
+                            commentId
+                    )
+                    .eq(
+                            ArticleComment::getIsDeleted,
+                            NOT_DELETED
+                    )
+                    .set(
+                            ArticleComment::getIsDeleted,
+                            DELETED
+                    )
+                    .set(
+                            ArticleComment::getUpdatedAt,
+                            now
+                    );
+
+            articleCommentMapper.update(
+                    null,
+                    replyUpdateWrapper
+            );
+        }
+    }
+
     /**
      * 判断评论是否已通过审核且未被软删除
      */
@@ -366,6 +465,14 @@ public class ArticleCommentServiceImpl
                 ArticleCommentStatus.APPROVED.getCode()
         ).equals(comment.getStatus())
                 && Integer.valueOf(NOT_DELETED)
+                .equals(comment.getIsDeleted());
+    }
+
+    /**
+     * 判断评论是否已经被软删除
+     */
+    private boolean isDeleted(ArticleComment comment) {
+        return Integer.valueOf(DELETED)
                 .equals(comment.getIsDeleted());
     }
 

@@ -7,6 +7,7 @@ import com.example.bloglite.dto.CreateReplyRequest;
 import com.example.bloglite.dto.PageResultDTO;
 import com.example.bloglite.service.ArticleCommentService;
 import jakarta.validation.Valid;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -63,5 +64,17 @@ public class CommentController {
                         size
                 )
         );
+    }
+
+    /**
+     * 删除当前用户自己的评论
+     */
+    @DeleteMapping("/{commentId}")
+    public ApiResponse<Void> deleteOwnComment(
+            @PathVariable("commentId") Long commentId
+    ) {
+        articleCommentService.deleteOwnComment(commentId);
+
+        return ApiResponse.success(null);
     }
 }

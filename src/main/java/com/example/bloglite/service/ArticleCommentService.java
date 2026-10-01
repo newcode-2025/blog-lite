@@ -44,4 +44,9 @@ public interface ArticleCommentService {
             long current,
             long size
     );
+
+    /**
+     * 删除当前用户自己的评论
+     */
+    void deleteOwnComment(Long commentId);
 }
