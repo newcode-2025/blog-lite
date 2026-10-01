@@ -47,13 +47,9 @@ public class UserAccountServiceImpl implements UserAccountService {
             throw new BizException(40000, "注册请求不能为空");
         }
 
-        // 去除用户名前后的空格
         String username = request.getUsername().trim();
-
-        // 将空邮箱统一转换为 null
         String email = normalizeEmail(request.getEmail());
 
-        // 先查询用户名是否已经存在
         Long usernameCount = userAccountMapper.selectCount(
                 new LambdaQueryWrapper<UserAccount>()
                         .eq(UserAccount::getUsername, username)
@@ -63,7 +59,6 @@ public class UserAccountServiceImpl implements UserAccountService {
             throw new BizException(40900, "用户名已存在");
         }
 
-        // 邮箱不为空时再检查邮箱是否已经存在
         if (email != null) {
             Long emailCount = userAccountMapper.selectCount(
                     new LambdaQueryWrapper<UserAccount>()
@@ -115,8 +110,8 @@ public class UserAccountServiceImpl implements UserAccountService {
         );
 
         /*
-         * 用户名不存在和密码错误返回完全相同的提示，
-         * 防止攻击者判断某个用户名是否已经注册。
+         * 用户名不存在和密码错误使用相同提示，
+         * 避免攻击者确认某个用户名是否已经存在。
          */
         if (userAccount == null
                 || userAccount.getPasswordHash() == null
@@ -159,6 +154,21 @@ public class UserAccountServiceImpl implements UserAccountService {
                 jwtService.getExpirationSeconds(),
                 toUserDTO(userAccount)
         );
+    }
+
+    @Override
+    public UserDTO getUserById(Long userId) {
+        if (userId == null || userId < 1) {
+            throw new BizException(40000, "用户 ID 不正确");
+        }
+
+        UserAccount userAccount = userAccountMapper.selectById(userId);
+
+        if (userAccount == null) {
+            throw new BizException(40400, "用户不存在");
+        }
+
+        return toUserDTO(userAccount);
     }
 
     /**

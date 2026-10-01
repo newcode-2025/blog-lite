@@ -22,4 +22,9 @@ public interface UserAccountService {
      * 登录并返回 JWT 和用户信息
      */
     LoginDTO login(LoginRequest request);
+
+    /**
+     * 根据用户 ID 查询脱敏用户信息
+     */
+    UserDTO getUserById(Long userId);
 }
