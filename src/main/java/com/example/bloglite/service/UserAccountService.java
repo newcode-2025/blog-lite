@@ -1,5 +1,6 @@
 package com.example.bloglite.service;
 
+import com.example.bloglite.dto.LoginRequest;
 import com.example.bloglite.dto.RegisterRequest;
 import com.example.bloglite.dto.UserDTO;
 
@@ -15,4 +16,12 @@ public interface UserAccountService {
      * @return 脱敏后的用户信息
      */
     UserDTO register(RegisterRequest request);
+
+    /**
+     * 校验登录用户名和密码
+     *
+     * @param request 登录请求
+     * @return 脱敏后的用户信息
+     */
+    UserDTO login(LoginRequest request);
 }

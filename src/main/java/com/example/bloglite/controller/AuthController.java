@@ -1,6 +1,7 @@
 package com.example.bloglite.controller;
 
 import com.example.bloglite.comment.ApiResponse;
+import com.example.bloglite.dto.LoginRequest;
 import com.example.bloglite.dto.RegisterRequest;
 import com.example.bloglite.dto.UserDTO;
 import com.example.bloglite.service.UserAccountService;
@@ -35,6 +36,19 @@ public class AuthController {
     ) {
         return ApiResponse.success(
                 userAccountService.register(request)
+        );
+    }
+
+    /**
+     * 用户登录
+     * 本课只校验用户名和密码，暂不签发 JWT
+     */
+    @PostMapping("/login")
+    public ApiResponse<UserDTO> login(
+            @Valid @RequestBody LoginRequest request
+    ) {
+        return ApiResponse.success(
+                userAccountService.login(request)
         );
     }
 }
