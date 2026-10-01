@@ -3,7 +3,9 @@ package com.example.bloglite.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.example.bloglite.dto.ArticleCommentDTO;
 import com.example.bloglite.dto.ArticleCommentListDTO;
+import com.example.bloglite.dto.ArticleReplyDTO;
 import com.example.bloglite.dto.CreateCommentRequest;
+import com.example.bloglite.dto.CreateReplyRequest;
 import com.example.bloglite.dto.PageResultDTO;
 import com.example.bloglite.dto.UserDTO;
 import com.example.bloglite.entity.Article;
@@ -159,17 +161,8 @@ public class ArticleCommentServiceImpl
             throw new BizException(40400, "文章不存在");
         }
 
-        if (current < 1) {
-            current = 1;
-        }
-
-        if (size < 1) {
-            size = DEFAULT_SIZE;
-        }
-
-        if (size > MAX_SIZE) {
-            size = MAX_SIZE;
-        }
+        current = normalizeCurrent(current);
+        size = normalizeSize(size);
 
         long offset = (current - 1) * size;
 
@@ -191,6 +184,189 @@ public class ArticleCommentServiceImpl
                 current,
                 size
         );
+    }
+
+    @Override
+    public ArticleCommentDTO createReply(
+            Long targetCommentId,
+            CreateReplyRequest request
+    ) {
+        if (targetCommentId == null || targetCommentId < 1) {
+            throw new BizException(40000, "目标评论 ID 不正确");
+        }
+
+        if (request == null) {
+            throw new BizException(40000, "回复请求不能为空");
+        }
+
+        String content = normalizeContent(request.getContent());
+
+        /*
+         * targetComment 是用户实际点击回复的那条评论，
+         * 它可以是顶级评论，也可以是某条回复。
+         */
+        ArticleComment targetComment =
+                articleCommentMapper.selectById(targetCommentId);
+
+        if (!isApprovedAndNotDeleted(targetComment)) {
+            throw new BizException(
+                    40400,
+                    "评论不存在或不可回复"
+            );
+        }
+
+        /*
+         * 所有回复都必须挂到顶级评论下面。
+         * 如果目标本身就是顶级评论，它就是所属顶级评论；
+         * 如果目标是一条回复，则继续查询它的顶级评论。
+         */
+        ArticleComment rootComment =
+                targetComment.getParentId() == null
+                        ? targetComment
+                        : articleCommentMapper.selectById(
+                        targetComment.getParentId()
+                );
+
+        if (!isApprovedAndNotDeleted(rootComment)
+                || rootComment.getParentId() != null) {
+            throw new BizException(
+                    40400,
+                    "所属顶级评论不存在或不可回复"
+            );
+        }
+
+        /*
+         * 回复所属的文章也必须保持公开且未删除。
+         */
+        Article article = articleMapper.selectOne(
+                new LambdaQueryWrapper<Article>()
+                        .eq(
+                                Article::getId,
+                                rootComment.getArticleId()
+                        )
+                        .eq(
+                                Article::getStatus,
+                                ARTICLE_STATUS_PUBLISHED
+                        )
+                        .eq(Article::getIsDeleted, NOT_DELETED)
+        );
+
+        if (article == null) {
+            throw new BizException(
+                    40400,
+                    "文章不存在或不可评论"
+            );
+        }
+
+        UserDTO currentUser = UserContext.getCurrentUser();
+
+        LocalDateTime now = LocalDateTime.now();
+
+        ArticleComment reply = new ArticleComment();
+        reply.setArticleId(rootComment.getArticleId());
+        reply.setUserId(currentUser.getId());
+        reply.setParentId(rootComment.getId());
+
+        /*
+         * 记录实际被回复的用户。
+         * 回复回复时，仍然只保存顶级评论 ID，不形成三级结构。
+         */
+        reply.setReplyToUserId(targetComment.getUserId());
+        reply.setContent(content);
+        reply.setStatus(ArticleCommentStatus.PENDING.getCode());
+        reply.setIsDeleted(NOT_DELETED);
+        reply.setCreatedAt(now);
+        reply.setUpdatedAt(now);
+
+        int affectedRows = articleCommentMapper.insert(reply);
+
+        if (affectedRows != 1) {
+            throw new BizException(
+                    50000,
+                    "回复发表失败，请稍后重试"
+            );
+        }
+
+        return toDTO(reply);
+    }
+
+    @Override
+    public PageResultDTO<ArticleReplyDTO> listPublicReplies(
+            Long topLevelCommentId,
+            long current,
+            long size
+    ) {
+        if (topLevelCommentId == null
+                || topLevelCommentId < 1) {
+            throw new BizException(40000, "评论 ID 不正确");
+        }
+
+        ArticleComment rootComment =
+                articleCommentMapper.selectById(topLevelCommentId);
+
+        /*
+         * 回复列表的入口必须是一条审核通过的顶级评论，
+         * 不能把某条回复 ID 当成新的列表根节点。
+         */
+        if (!isApprovedAndNotDeleted(rootComment)
+                || rootComment.getParentId() != null) {
+            throw new BizException(40400, "评论不存在");
+        }
+
+        Article article = articleMapper.selectOne(
+                new LambdaQueryWrapper<Article>()
+                        .eq(
+                                Article::getId,
+                                rootComment.getArticleId()
+                        )
+                        .eq(
+                                Article::getStatus,
+                                ARTICLE_STATUS_PUBLISHED
+                        )
+                        .eq(Article::getIsDeleted, NOT_DELETED)
+        );
+
+        if (article == null) {
+            throw new BizException(40400, "文章不存在");
+        }
+
+        current = normalizeCurrent(current);
+        size = normalizeSize(size);
+
+        long offset = (current - 1) * size;
+
+        List<ArticleReplyDTO> records =
+                articleCommentMapper.selectApprovedReplies(
+                        topLevelCommentId,
+                        offset,
+                        size
+                );
+
+        long count =
+                articleCommentMapper.countApprovedReplies(
+                        topLevelCommentId
+                );
+
+        return new PageResultDTO<>(
+                records,
+                count,
+                current,
+                size
+        );
+    }
+
+    /**
+     * 判断评论是否已通过审核且未被软删除
+     */
+    private boolean isApprovedAndNotDeleted(
+            ArticleComment comment
+    ) {
+        return comment != null
+                && Integer.valueOf(
+                ArticleCommentStatus.APPROVED.getCode()
+        ).equals(comment.getStatus())
+                && Integer.valueOf(NOT_DELETED)
+                .equals(comment.getIsDeleted());
     }
 
     /**
@@ -216,6 +392,28 @@ public class ArticleCommentServiceImpl
         }
 
         return normalizedContent;
+    }
+
+    /**
+     * 规范化当前页码
+     */
+    private long normalizeCurrent(long current) {
+        return current < 1 ? 1 : current;
+    }
+
+    /**
+     * 规范化分页大小
+     */
+    private long normalizeSize(long size) {
+        if (size < 1) {
+            return DEFAULT_SIZE;
+        }
+
+        if (size > MAX_SIZE) {
+            return MAX_SIZE;
+        }
+
+        return size;
     }
 
     /**

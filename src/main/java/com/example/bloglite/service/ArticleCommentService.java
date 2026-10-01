@@ -1,9 +1,6 @@
 package com.example.bloglite.service;
 
-import com.example.bloglite.dto.ArticleCommentDTO;
-import com.example.bloglite.dto.ArticleCommentListDTO;
-import com.example.bloglite.dto.CreateCommentRequest;
-import com.example.bloglite.dto.PageResultDTO;
+import com.example.bloglite.dto.*;
 
 /**
  * 文章评论业务接口
@@ -27,6 +24,23 @@ public interface ArticleCommentService {
      */
     PageResultDTO<ArticleCommentListDTO> listPublicComments(
             Long articleId,
+            long current,
+            long size
+    );
+
+    /**
+     * 回复指定评论
+     */
+    ArticleCommentDTO createReply(
+            Long targetCommentId,
+            CreateReplyRequest request
+    );
+
+    /**
+     * 分页查询某个顶级评论下的公开回复
+     */
+    PageResultDTO<ArticleReplyDTO> listPublicReplies(
+            Long topLevelCommentId,
             long current,
             long size
     );

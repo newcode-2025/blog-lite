@@ -2,6 +2,7 @@ package com.example.bloglite.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.example.bloglite.dto.ArticleCommentListDTO;
+import com.example.bloglite.dto.ArticleReplyDTO;
 import com.example.bloglite.entity.ArticleComment;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -28,5 +29,21 @@ public interface ArticleCommentMapper extends BaseMapper<ArticleComment> {
      */
     long countApprovedTopLevelComments(
             @Param("articleId") Long articleId
+    );
+
+    /**
+     * 分页查询某个顶级评论下审核通过的回复
+     */
+    List<ArticleReplyDTO> selectApprovedReplies(
+            @Param("parentId") Long parentId,
+            @Param("offset") long offset,
+            @Param("size") long size
+    );
+
+    /**
+     * 查询某个顶级评论下审核通过的回复总数
+     */
+    long countApprovedReplies(
+            @Param("parentId") Long parentId
     );
 }

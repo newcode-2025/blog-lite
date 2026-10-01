@@ -42,4 +42,44 @@
           AND c.is_deleted = 0
     </select>
 
+    <!-- 分页查询某条顶级评论下的公开回复 -->
+    <select id="selectApprovedReplies"
+            resultType="com.example.bloglite.dto.ArticleReplyDTO">
+
+        SELECT
+            c.id,
+            c.article_id,
+            c.parent_id,
+            c.user_id,
+            u.nickname,
+            u.avatar_url,
+            c.reply_to_user_id,
+            reply_user.nickname AS reply_to_nickname,
+            c.content,
+            c.created_at
+        FROM article_comment c
+                 JOIN user_account u
+                      ON u.id = c.user_id
+                 LEFT JOIN user_account reply_user
+                           ON reply_user.id = c.reply_to_user_id
+        WHERE c.parent_id = #{parentId}
+          AND c.status = 1
+          AND c.is_deleted = 0
+        ORDER BY
+            c.created_at ASC,
+            c.id ASC
+            LIMIT #{offset}, #{size}
+    </select>
+
+    <!-- 查询某条顶级评论下的公开回复总数 -->
+    <select id="countApprovedReplies"
+            resultType="long">
+
+        SELECT COUNT(1)
+        FROM article_comment c
+        WHERE c.parent_id = #{parentId}
+          AND c.status = 1
+          AND c.is_deleted = 0
+    </select>
+
 </mapper>
