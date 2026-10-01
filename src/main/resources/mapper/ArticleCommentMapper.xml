@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.bloglite.mapper.ArticleCommentMapper">
+
+    <!-- 分页查询公开顶级评论 -->
+    <select id="selectApprovedTopLevelComments"
+            resultType="com.example.bloglite.dto.ArticleCommentListDTO">
+
+        SELECT
+            c.id,
+            c.article_id,
+            c.user_id,
+            u.nickname,
+            u.avatar_url,
+            c.content,
+            c.created_at
+        FROM article_comment c
+                 JOIN user_account u
+                      ON u.id = c.user_id
+        WHERE c.article_id = #{articleId}
+          AND c.parent_id IS NULL
+          AND c.status = 1
+          AND c.is_deleted = 0
+        ORDER BY
+            c.created_at DESC,
+            c.id DESC
+            LIMIT #{offset}, #{size}
+    </select>
+
+    <!-- 查询公开顶级评论总数 -->
+    <select id="countApprovedTopLevelComments"
+            resultType="long">
+
+        SELECT COUNT(1)
+        FROM article_comment c
+        WHERE c.article_id = #{articleId}
+          AND c.parent_id IS NULL
+          AND c.status = 1
+          AND c.is_deleted = 0
+    </select>
+
+</mapper>

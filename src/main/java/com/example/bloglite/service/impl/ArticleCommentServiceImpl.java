@@ -2,7 +2,9 @@ package com.example.bloglite.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.example.bloglite.dto.ArticleCommentDTO;
+import com.example.bloglite.dto.ArticleCommentListDTO;
 import com.example.bloglite.dto.CreateCommentRequest;
+import com.example.bloglite.dto.PageResultDTO;
 import com.example.bloglite.dto.UserDTO;
 import com.example.bloglite.entity.Article;
 import com.example.bloglite.entity.ArticleComment;
@@ -15,6 +17,7 @@ import com.example.bloglite.util.UserContext;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * 文章评论业务实现
@@ -37,6 +40,16 @@ public class ArticleCommentServiceImpl
      * 评论内容最大长度
      */
     private static final int COMMENT_CONTENT_MAX_LENGTH = 1000;
+
+    /**
+     * 默认分页大小
+     */
+    private static final long DEFAULT_SIZE = 10;
+
+    /**
+     * 最大分页大小
+     */
+    private static final long MAX_SIZE = 50;
 
     private final ArticleCommentMapper articleCommentMapper;
 
@@ -116,6 +129,68 @@ public class ArticleCommentServiceImpl
         }
 
         return toDTO(articleComment);
+    }
+
+    @Override
+    public PageResultDTO<ArticleCommentListDTO> listPublicComments(
+            Long articleId,
+            long current,
+            long size
+    ) {
+        if (articleId == null || articleId < 1) {
+            throw new BizException(40000, "文章 ID 不正确");
+        }
+
+        /*
+         * 评论列表属于公开接口，但仍然要先确认文章存在、
+         * 已发布且没有软删除。
+         */
+        Article article = articleMapper.selectOne(
+                new LambdaQueryWrapper<Article>()
+                        .eq(Article::getId, articleId)
+                        .eq(
+                                Article::getStatus,
+                                ARTICLE_STATUS_PUBLISHED
+                        )
+                        .eq(Article::getIsDeleted, NOT_DELETED)
+        );
+
+        if (article == null) {
+            throw new BizException(40400, "文章不存在");
+        }
+
+        if (current < 1) {
+            current = 1;
+        }
+
+        if (size < 1) {
+            size = DEFAULT_SIZE;
+        }
+
+        if (size > MAX_SIZE) {
+            size = MAX_SIZE;
+        }
+
+        long offset = (current - 1) * size;
+
+        List<ArticleCommentListDTO> records =
+                articleCommentMapper.selectApprovedTopLevelComments(
+                        articleId,
+                        offset,
+                        size
+                );
+
+        long count =
+                articleCommentMapper.countApprovedTopLevelComments(
+                        articleId
+                );
+
+        return new PageResultDTO<>(
+                records,
+                count,
+                current,
+                size
+        );
     }
 
     /**
