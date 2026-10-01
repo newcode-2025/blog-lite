@@ -1,6 +1,6 @@
 package com.example.bloglite.controller;
 
-import com.example.bloglite.comment.ApiResponse;
+import com.example.bloglite.common.ApiResponse;
 import com.example.bloglite.dto.ArchiveDTO;
 import com.example.bloglite.service.ArticleService;
 import org.springframework.web.bind.annotation.GetMapping;

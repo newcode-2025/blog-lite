@@ -1,6 +1,6 @@
 package com.example.bloglite.exception;
 
-import com.example.bloglite.comment.ApiResponse;
+import com.example.bloglite.common.ApiResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.converter.HttpMessageNotReadableException;

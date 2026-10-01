@@ -1,4 +1,4 @@
-package com.example.bloglite.comment;
+package com.example.bloglite.common;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

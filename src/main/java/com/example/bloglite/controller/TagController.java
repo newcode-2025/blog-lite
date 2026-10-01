@@ -1,6 +1,6 @@
 package com.example.bloglite.controller;
 
-import com.example.bloglite.comment.ApiResponse;
+import com.example.bloglite.common.ApiResponse;
 import com.example.bloglite.dto.ArticleCardDTO;
 import com.example.bloglite.dto.PageResultDTO;
 import com.example.bloglite.dto.TagListItemDTO;
