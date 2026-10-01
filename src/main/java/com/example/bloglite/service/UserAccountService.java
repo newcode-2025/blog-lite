@@ -1,9 +1,6 @@
 package com.example.bloglite.service;
 
-import com.example.bloglite.dto.LoginDTO;
-import com.example.bloglite.dto.LoginRequest;
-import com.example.bloglite.dto.RegisterRequest;
-import com.example.bloglite.dto.UserDTO;
+import com.example.bloglite.dto.*;
 
 /**
  * 用户账号业务接口
@@ -27,4 +24,12 @@ public interface UserAccountService {
      * 根据用户 ID 查询脱敏用户信息
      */
     UserDTO getUserById(Long userId);
+
+    /**
+     * 修改当前用户资料
+     */
+    UserDTO updateCurrentUser(
+            Long userId,
+            UpdateProfileRequest request
+    );
 }

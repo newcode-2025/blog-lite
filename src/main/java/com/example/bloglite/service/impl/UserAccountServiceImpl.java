@@ -1,15 +1,18 @@
 package com.example.bloglite.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.example.bloglite.dto.LoginDTO;
 import com.example.bloglite.dto.LoginRequest;
 import com.example.bloglite.dto.RegisterRequest;
+import com.example.bloglite.dto.UpdateProfileRequest;
 import com.example.bloglite.dto.UserDTO;
 import com.example.bloglite.entity.UserAccount;
 import com.example.bloglite.exception.BizException;
 import com.example.bloglite.mapper.UserAccountMapper;
 import com.example.bloglite.service.JwtService;
 import com.example.bloglite.service.UserAccountService;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -48,7 +51,7 @@ public class UserAccountServiceImpl implements UserAccountService {
         }
 
         String username = request.getUsername().trim();
-        String email = normalizeEmail(request.getEmail());
+        String email = normalizeNullableText(request.getEmail());
 
         Long usernameCount = userAccountMapper.selectCount(
                 new LambdaQueryWrapper<UserAccount>()
@@ -142,7 +145,6 @@ public class UserAccountServiceImpl implements UserAccountService {
             );
         }
 
-        // 登录成功后签发 JWT
         String token = jwtService.createToken(userAccount.getId());
 
         userAccount.setLastLoginAt(now);
@@ -171,21 +173,101 @@ public class UserAccountServiceImpl implements UserAccountService {
         return toUserDTO(userAccount);
     }
 
+    @Transactional
+    @Override
+    public UserDTO updateCurrentUser(
+            Long userId,
+            UpdateProfileRequest request
+    ) {
+        if (userId == null || userId < 1) {
+            throw new BizException(40000, "用户 ID 不正确");
+        }
+
+        if (request == null) {
+            throw new BizException(40000, "修改资料请求不能为空");
+        }
+
+        UserAccount userAccount = userAccountMapper.selectById(userId);
+
+        if (userAccount == null) {
+            throw new BizException(40400, "用户不存在");
+        }
+
+        if (!Integer.valueOf(STATUS_ENABLED).equals(userAccount.getStatus())) {
+            throw new BizException(40300, "账号已被禁用");
+        }
+
+        if (request.getNickname() == null
+                || request.getNickname().trim().isEmpty()) {
+            throw new BizException(40000, "昵称不能为空");
+        }
+
+        String nickname = request.getNickname().trim();
+        String email = normalizeNullableText(request.getEmail());
+        String avatarUrl = normalizeNullableText(request.getAvatarUrl());
+
+        if (email != null) {
+            Long emailCount = userAccountMapper.selectCount(
+                    new LambdaQueryWrapper<UserAccount>()
+                            .eq(UserAccount::getEmail, email)
+                            .ne(UserAccount::getId, userId)
+            );
+
+            if (emailCount > 0) {
+                throw new BizException(40900, "邮箱已被注册");
+            }
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+
+        /*
+         * 使用 LambdaUpdateWrapper 显式写入 null，
+         * 这样空邮箱和空头像可以被真正清空。
+         */
+        LambdaUpdateWrapper<UserAccount> updateWrapper =
+                new LambdaUpdateWrapper<>();
+
+        updateWrapper
+                .eq(UserAccount::getId, userId)
+                .set(UserAccount::getNickname, nickname)
+                .set(UserAccount::getEmail, email)
+                .set(UserAccount::getAvatarUrl, avatarUrl)
+                .set(UserAccount::getUpdatedAt, now);
+
+        try {
+            userAccountMapper.update(null, updateWrapper);
+        } catch (DuplicateKeyException exception) {
+            throw new BizException(
+                    40900,
+                    "邮箱已被注册",
+                    exception
+            );
+        }
+
+        UserAccount updatedUser = userAccountMapper.selectById(userId);
+
+        if (updatedUser == null) {
+            throw new BizException(40400, "用户不存在");
+        }
+
+        return toUserDTO(updatedUser);
+    }
+
     /**
-     * 将空邮箱统一转换为 null
+     * 将空字符串统一转换为 null
      */
-    private String normalizeEmail(String email) {
-        if (email == null) {
+    private String normalizeNullableText(String value) {
+        if (value == null) {
             return null;
         }
 
-        String trimmedEmail = email.trim();
+        String trimmedValue = value.trim();
 
-        if (trimmedEmail.isEmpty()) {
+        if (trimmedValue.isEmpty()) {
             return null;
         }
 
-        return trimmedEmail;
+        return trimmedValue;
     }
 
     /**

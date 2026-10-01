@@ -7,6 +7,7 @@ import com.example.bloglite.dto.RegisterRequest;
 import com.example.bloglite.dto.UserDTO;
 import com.example.bloglite.service.UserAccountService;
 import jakarta.validation.Valid;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -47,5 +48,17 @@ public class AuthController {
         return ApiResponse.success(
                 userAccountService.login(request)
         );
+    }
+
+    /**
+     * 退出登录
+     *
+     * 当前 JWT 是无状态令牌，服务端没有保存登录会话。
+     * 真正的退出由前端删除本地 token 完成。
+     */
+    @PostMapping("/logout")
+    public ApiResponse<Void> logout() {
+        SecurityContextHolder.clearContext();
+        return ApiResponse.success(null);
     }
 }
