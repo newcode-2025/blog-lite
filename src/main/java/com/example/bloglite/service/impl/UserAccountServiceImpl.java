@@ -1,15 +1,18 @@
 package com.example.bloglite.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.example.bloglite.dto.LoginDTO;
 import com.example.bloglite.dto.LoginRequest;
 import com.example.bloglite.dto.RegisterRequest;
 import com.example.bloglite.dto.UserDTO;
 import com.example.bloglite.entity.UserAccount;
 import com.example.bloglite.exception.BizException;
 import com.example.bloglite.mapper.UserAccountMapper;
+import com.example.bloglite.service.JwtService;
 import com.example.bloglite.service.UserAccountService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 
@@ -26,13 +29,16 @@ public class UserAccountServiceImpl implements UserAccountService {
 
     private final UserAccountMapper userAccountMapper;
     private final PasswordEncoder passwordEncoder;
+    private final JwtService jwtService;
 
     public UserAccountServiceImpl(
             UserAccountMapper userAccountMapper,
-            PasswordEncoder passwordEncoder
+            PasswordEncoder passwordEncoder,
+            JwtService jwtService
     ) {
         this.userAccountMapper = userAccountMapper;
         this.passwordEncoder = passwordEncoder;
+        this.jwtService = jwtService;
     }
 
     @Override
@@ -85,7 +91,6 @@ public class UserAccountServiceImpl implements UserAccountService {
         userAccount.setCreatedAt(now);
         userAccount.setUpdatedAt(now);
 
-        // 数据库唯一索引负责最终防重
         int affectedRows = userAccountMapper.insert(userAccount);
 
         if (affectedRows != 1) {
@@ -95,13 +100,13 @@ public class UserAccountServiceImpl implements UserAccountService {
         return toUserDTO(userAccount);
     }
 
+    @Transactional
     @Override
-    public UserDTO login(LoginRequest request) {
+    public LoginDTO login(LoginRequest request) {
         if (request == null) {
             throw new BizException(40000, "登录请求不能为空");
         }
 
-        // 注册时已经去除用户名前后空格，登录时保持一致
         String username = request.getUsername().trim();
 
         UserAccount userAccount = userAccountMapper.selectOne(
@@ -110,11 +115,8 @@ public class UserAccountServiceImpl implements UserAccountService {
         );
 
         /*
-         * 两种情况统一返回相同提示：
-         * 1. 用户名不存在
-         * 2. 密码错误
-         *
-         * 这样可以避免攻击者通过错误信息确认某个用户名是否存在。
+         * 用户名不存在和密码错误返回完全相同的提示，
+         * 防止攻击者判断某个用户名是否已经注册。
          */
         if (userAccount == null
                 || userAccount.getPasswordHash() == null
@@ -125,18 +127,12 @@ public class UserAccountServiceImpl implements UserAccountService {
             throw new BizException(40100, "用户名或密码错误");
         }
 
-        // 只有密码验证通过后，才明确告诉用户账号被禁用
         if (!Integer.valueOf(STATUS_ENABLED).equals(userAccount.getStatus())) {
             throw new BizException(40300, "账号已被禁用");
         }
 
         LocalDateTime now = LocalDateTime.now();
 
-        /*
-         * 登录成功只更新最后登录时间和更新时间。
-         * MyBatis-Plus 默认会忽略实体中的 null 字段，
-         * 因此不会误改用户名、密码哈希等字段。
-         */
         UserAccount loginUpdate = new UserAccount();
         loginUpdate.setId(userAccount.getId());
         loginUpdate.setLastLoginAt(now);
@@ -151,10 +147,18 @@ public class UserAccountServiceImpl implements UserAccountService {
             );
         }
 
+        // 登录成功后签发 JWT
+        String token = jwtService.createToken(userAccount.getId());
+
         userAccount.setLastLoginAt(now);
         userAccount.setUpdatedAt(now);
 
-        return toUserDTO(userAccount);
+        return new LoginDTO(
+                token,
+                "Bearer",
+                jwtService.getExpirationSeconds(),
+                toUserDTO(userAccount)
+        );
     }
 
     /**

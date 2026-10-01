@@ -1,6 +1,7 @@
 package com.example.bloglite.controller;
 
 import com.example.bloglite.comment.ApiResponse;
+import com.example.bloglite.dto.LoginDTO;
 import com.example.bloglite.dto.LoginRequest;
 import com.example.bloglite.dto.RegisterRequest;
 import com.example.bloglite.dto.UserDTO;
@@ -26,9 +27,6 @@ public class AuthController {
 
     /**
      * 用户注册
-     *
-     * @Valid 会先执行 RegisterRequest 上的参数校验
-     * 校验失败或业务异常时，由 GlobalExceptionHandler 统一返回
      */
     @PostMapping("/register")
     public ApiResponse<UserDTO> register(
@@ -40,11 +38,10 @@ public class AuthController {
     }
 
     /**
-     * 用户登录
-     * 本课只校验用户名和密码，暂不签发 JWT
+     * 用户登录并获取 JWT
      */
     @PostMapping("/login")
-    public ApiResponse<UserDTO> login(
+    public ApiResponse<LoginDTO> login(
             @Valid @RequestBody LoginRequest request
     ) {
         return ApiResponse.success(

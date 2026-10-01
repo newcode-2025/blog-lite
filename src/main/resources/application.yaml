@@ -44,3 +44,15 @@ mybatis-plus:
     db-config:
       # 数据库主键使用 AUTO_INCREMENT，Java 使用 Long
       id-type: auto
+
+# JWT 配置
+blog:
+  jwt:
+    # JWT 签发者
+    issuer: blog-lite
+
+    # 本地开发默认密钥；生产环境通过 BLOG_JWT_SECRET 环境变量覆盖
+    secret: "${BLOG_JWT_SECRET:${BLOG_JWT_SECRET:}}"
+
+    # 令牌有效期，单位：分钟
+    expiration-minutes: 120
