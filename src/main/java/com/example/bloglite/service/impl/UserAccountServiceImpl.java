@@ -4,9 +4,9 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.example.bloglite.dto.RegisterRequest;
 import com.example.bloglite.dto.UserDTO;
 import com.example.bloglite.entity.UserAccount;
+import com.example.bloglite.exception.BizException;
 import com.example.bloglite.mapper.UserAccountMapper;
 import com.example.bloglite.service.UserAccountService;
-import org.springframework.dao.DuplicateKeyException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -32,7 +32,7 @@ public class UserAccountServiceImpl implements UserAccountService {
     @Override
     public UserDTO register(RegisterRequest request) {
         if (request == null) {
-            throw new IllegalArgumentException("注册请求不能为空");
+            throw new BizException(40000, "注册请求不能为空");
         }
 
         // 去除用户名前后的空格
@@ -48,7 +48,7 @@ public class UserAccountServiceImpl implements UserAccountService {
         );
 
         if (usernameCount > 0) {
-            throw new IllegalArgumentException("用户名已存在");
+            throw new BizException(40900, "用户名已存在");
         }
 
         // 邮箱不为空时再检查邮箱是否已经存在
@@ -59,7 +59,7 @@ public class UserAccountServiceImpl implements UserAccountService {
             );
 
             if (emailCount > 0) {
-                throw new IllegalArgumentException("邮箱已被注册");
+                throw new BizException(40900, "邮箱已被注册");
             }
         }
 
@@ -79,14 +79,11 @@ public class UserAccountServiceImpl implements UserAccountService {
         userAccount.setCreatedAt(now);
         userAccount.setUpdatedAt(now);
 
-        try {
-            userAccountMapper.insert(userAccount);
-        } catch (DuplicateKeyException exception) {
-            // 兜底处理数据库唯一索引冲突
-            throw new IllegalArgumentException(
-                    "用户名或邮箱已存在",
-                    exception
-            );
+        // 数据库唯一索引负责最终防重
+        int affectedRows = userAccountMapper.insert(userAccount);
+
+        if (affectedRows != 1) {
+            throw new BizException(50000, "注册失败，请稍后重试");
         }
 
         return toUserDTO(userAccount);

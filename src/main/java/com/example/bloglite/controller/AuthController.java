@@ -25,16 +25,16 @@ public class AuthController {
 
     /**
      * 用户注册
+     *
+     * @Valid 会先执行 RegisterRequest 上的参数校验
+     * 校验失败或业务异常时，由 GlobalExceptionHandler 统一返回
      */
     @PostMapping("/register")
     public ApiResponse<UserDTO> register(
             @Valid @RequestBody RegisterRequest request
     ) {
-        try {
-            UserDTO user = userAccountService.register(request);
-            return ApiResponse.success(user);
-        } catch (IllegalArgumentException exception) {
-            return ApiResponse.error(exception.getMessage());
-        }
+        return ApiResponse.success(
+                userAccountService.register(request)
+        );
     }
 }
