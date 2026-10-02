@@ -1,0 +1,47 @@
+package com.example.bloglite.controller;
+
+import com.example.bloglite.common.ApiResponse;
+import com.example.bloglite.dto.AdminArticleListItemDTO;
+import com.example.bloglite.dto.PageResultDTO;
+import com.example.bloglite.service.AdminArticleService;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+/**
+ * 后台文章管理接口
+ */
+@RestController
+@RequestMapping("/api/v1/admin/articles")
+public class AdminArticleController {
+
+    private final AdminArticleService adminArticleService;
+
+    public AdminArticleController(
+            AdminArticleService adminArticleService
+    ) {
+        this.adminArticleService = adminArticleService;
+    }
+
+    /**
+     * 分页查询当前登录用户的文章
+     */
+    @GetMapping
+    public ApiResponse<PageResultDTO<AdminArticleListItemDTO>>
+    listArticles(
+            @RequestParam(required = false) Integer status,
+            @RequestParam(defaultValue = "") String keywords,
+            @RequestParam(defaultValue = "1") long current,
+            @RequestParam(defaultValue = "10") long size
+    ) {
+        return ApiResponse.success(
+                adminArticleService.listArticles(
+                        status,
+                        keywords,
+                        current,
+                        size
+                )
+        );
+    }
+}
