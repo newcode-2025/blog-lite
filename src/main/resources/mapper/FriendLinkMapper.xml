@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.bloglite.mapper.FriendLinkMapper">
+
+    <!-- 友链返回结构 -->
+    <resultMap id="FriendLinkResultMap"
+               type="com.example.bloglite.dto.FriendLinkDTO">
+
+        <id property="id" column="id"/>
+        <result property="name" column="name"/>
+        <result property="avatarUrl" column="avatar_url"/>
+        <result property="address" column="address"/>
+        <result property="description" column="description"/>
+        <result property="sortOrder" column="sort_order"/>
+        <result property="status" column="status"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <!-- 后台友链公共筛选条件 -->
+    <sql id="AdminFriendLinkWhere">
+        WHERE 1 = 1
+
+        <if test="status != null">
+            AND status = #{status}
+        </if>
+
+        <if test="keywords != null and keywords != ''">
+            AND (
+            name LIKE CONCAT('%', #{keywords}, '%')
+            OR address LIKE CONCAT('%', #{keywords}, '%')
+            OR description LIKE CONCAT('%', #{keywords}, '%')
+            )
+        </if>
+    </sql>
+
+    <!-- 查询全部显示状态的友链 -->
+    <select id="selectPublicLinks"
+            resultMap="FriendLinkResultMap">
+
+        SELECT
+            id,
+            name,
+            avatar_url,
+            address,
+            description,
+            sort_order,
+            status,
+            created_at,
+            updated_at
+        FROM friend_link
+        WHERE status = 1
+        ORDER BY
+            sort_order ASC,
+            id ASC
+    </select>
+
+    <!-- 后台分页查询友链 -->
+    <select id="selectAdminLinks"
+            resultMap="FriendLinkResultMap">
+
+        SELECT
+        id,
+        name,
+        avatar_url,
+        address,
+        description,
+        sort_order,
+        status,
+        created_at,
+        updated_at
+        FROM friend_link
+
+        <include refid="AdminFriendLinkWhere"/>
+
+        ORDER BY
+        sort_order ASC,
+        id ASC
+        LIMIT #{offset}, #{size}
+    </select>
+
+    <!-- 统计后台友链数量 -->
+    <select id="countAdminLinks"
+            resultType="long">
+
+        SELECT COUNT(1)
+        FROM friend_link
+
+        <include refid="AdminFriendLinkWhere"/>
+    </select>
+
+    <!-- 根据 ID 查询友链 -->
+    <select id="selectAdminLinkById"
+            resultMap="FriendLinkResultMap">
+
+        SELECT
+            id,
+            name,
+            avatar_url,
+            address,
+            description,
+            sort_order,
+            status,
+            created_at,
+            updated_at
+        FROM friend_link
+        WHERE id = #{linkId}
+    </select>
+
+    <!-- 统计相同地址的友链 -->
+    <select id="countByAddress"
+            resultType="long">
+
+        SELECT COUNT(*)
+        FROM friend_link
+        WHERE address = #{address}
+
+        <if test="excludeId != null">
+            AND id != #{excludeId}
+        </if>
+    </select>
+
+</mapper>
