@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.bloglite.mapper.AdminCategoryMapper">
+
+    <!-- 后台分类返回结构 -->
+    <resultMap id="AdminCategoryResultMap"
+               type="com.example.bloglite.dto.AdminCategoryDTO">
+
+        <id property="id" column="id"/>
+        <result property="name" column="name"/>
+        <result property="sortOrder" column="sort_order"/>
+        <result property="articleCount" column="article_count"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <!-- 查询全部分类及关联文章数量 -->
+    <select id="selectAdminCategories"
+            resultMap="AdminCategoryResultMap">
+
+        SELECT
+            c.id,
+            c.name,
+            c.sort_order,
+            c.created_at,
+            c.updated_at,
+            COUNT(a.id) AS article_count
+        FROM category c
+                 LEFT JOIN article a
+                           ON a.category_id = c.id
+        GROUP BY
+            c.id,
+            c.name,
+            c.sort_order,
+            c.created_at,
+            c.updated_at
+        ORDER BY
+            c.sort_order ASC,
+            c.id ASC
+    </select>
+
+    <!-- 根据 ID 查询分类管理数据 -->
+    <select id="selectAdminCategoryById"
+            resultMap="AdminCategoryResultMap">
+
+        SELECT
+            c.id,
+            c.name,
+            c.sort_order,
+            c.created_at,
+            c.updated_at,
+            COUNT(a.id) AS article_count
+        FROM category c
+                 LEFT JOIN article a
+                           ON a.category_id = c.id
+        WHERE c.id = #{categoryId}
+        GROUP BY
+            c.id,
+            c.name,
+            c.sort_order,
+            c.created_at,
+            c.updated_at
+    </select>
+
+    <!-- 统计同名分类 -->
+    <select id="countByCategoryName"
+            resultType="long">
+
+        SELECT COUNT(*)
+        FROM category
+        WHERE name = #{name}
+
+        <if test="excludeId != null">
+            AND id != #{excludeId}
+        </if>
+    </select>
+
+    <!-- 统计分类被文章引用的数量 -->
+    <select id="countArticlesByCategoryId"
+            resultType="long">
+
+        SELECT COUNT(*)
+        FROM article
+        WHERE category_id = #{categoryId}
+    </select>
+
+</mapper>
