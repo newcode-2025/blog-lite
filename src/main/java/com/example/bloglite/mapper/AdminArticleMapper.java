@@ -36,6 +36,24 @@ public interface AdminArticleMapper extends BaseMapper<Article> {
     );
 
     /**
+     * 分页查询当前用户回收站
+     */
+    List<AdminArticleListItemDTO> selectDeletedAdminArticles(
+            @Param("authorId") Long authorId,
+            @Param("keywords") String keywords,
+            @Param("offset") long offset,
+            @Param("size") long size
+    );
+
+    /**
+     * 统计当前用户回收站数量
+     */
+    long countDeletedAdminArticles(
+            @Param("authorId") Long authorId,
+            @Param("keywords") String keywords
+    );
+
+    /**
      * 查询后台文章编辑详情
      */
     AdminArticleDetailDTO selectAdminArticleDetail(

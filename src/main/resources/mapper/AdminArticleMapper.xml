@@ -68,6 +68,19 @@
         </if>
     </sql>
 
+    <!-- 回收站公共筛选条件 -->
+    <sql id="DeletedAdminArticleWhere">
+        WHERE a.is_deleted = 1
+        AND a.author_id = #{authorId}
+
+        <if test="keywords != null and keywords != ''">
+            AND (
+            a.title LIKE CONCAT('%', #{keywords}, '%')
+            OR a.summary LIKE CONCAT('%', #{keywords}, '%')
+            )
+        </if>
+    </sql>
+
     <!-- 分页查询当前用户的文章 -->
     <select id="selectAdminArticles"
             resultMap="AdminArticleListItemResultMap">
@@ -105,6 +118,45 @@
         FROM article a
 
         <include refid="AdminArticleWhere"/>
+    </select>
+
+    <!-- 分页查询当前用户回收站 -->
+    <select id="selectDeletedAdminArticles"
+            resultMap="AdminArticleListItemResultMap">
+
+        SELECT
+        a.id,
+        a.title,
+        a.summary,
+        a.category_id,
+        c.name AS category_name,
+        a.status,
+        a.is_top,
+        a.is_featured,
+        a.view_count,
+        a.published_at,
+        a.created_at,
+        a.updated_at
+        FROM article a
+        LEFT JOIN category c
+        ON c.id = a.category_id
+
+        <include refid="DeletedAdminArticleWhere"/>
+
+        ORDER BY
+        a.updated_at DESC,
+        a.id DESC
+        LIMIT #{offset}, #{size}
+    </select>
+
+    <!-- 统计当前用户回收站数量 -->
+    <select id="countDeletedAdminArticles"
+            resultType="long">
+
+        SELECT COUNT(*)
+        FROM article a
+
+        <include refid="DeletedAdminArticleWhere"/>
     </select>
 
     <!-- 查询后台文章编辑详情 -->
