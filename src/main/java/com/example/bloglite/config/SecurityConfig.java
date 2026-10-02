@@ -72,7 +72,8 @@ public class SecurityConfig {
                                 "/api/v1/tags/**",
                                 "/api/v1/archives/**",
                                 "/api/v1/talks/**",
-                                "/api/v1/links/**"
+                                "/api/v1/links/**",
+                                "/api/v1/albums/**"
                         ).permitAll()
 
                         // 其他接口需要登录

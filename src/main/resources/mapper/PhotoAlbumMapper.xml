@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.bloglite.mapper.PhotoAlbumMapper">
+
+    <!-- 相册返回结构 -->
+    <resultMap id="PhotoAlbumResultMap"
+               type="com.example.bloglite.dto.PhotoAlbumDTO">
+
+        <id property="id" column="id"/>
+        <result property="name" column="name"/>
+        <result property="description" column="description"/>
+        <result property="coverUrl" column="cover_url"/>
+        <result property="sortOrder" column="sort_order"/>
+        <result property="status" column="status"/>
+        <result property="photoCount" column="photo_count"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <!-- 相册公共查询字段 -->
+    <sql id="PhotoAlbumColumns">
+        pa.id,
+        pa.name,
+        pa.description,
+        pa.cover_url,
+        pa.sort_order,
+        pa.status,
+        pa.created_at,
+        pa.updated_at,
+        COUNT(p.id) AS photo_count
+    </sql>
+
+    <!-- 后台相册公共筛选条件 -->
+    <sql id="AdminPhotoAlbumWhere">
+        WHERE pa.is_deleted = 0
+
+        <if test="status != null">
+            AND pa.status = #{status}
+        </if>
+
+        <if test="keywords != null and keywords != ''">
+            AND (
+            pa.name LIKE CONCAT('%', #{keywords}, '%')
+            OR pa.description LIKE CONCAT('%', #{keywords}, '%')
+            )
+        </if>
+    </sql>
+
+    <!-- 查询全部公开相册 -->
+    <select id="selectPublicAlbums"
+            resultMap="PhotoAlbumResultMap">
+
+        SELECT
+        <include refid="PhotoAlbumColumns"/>
+        FROM photo_album pa
+        LEFT JOIN photo p
+        ON p.album_id = pa.id
+        AND p.is_deleted = 0
+        WHERE pa.status = 1
+        AND pa.is_deleted = 0
+        GROUP BY
+        pa.id,
+        pa.name,
+        pa.description,
+        pa.cover_url,
+        pa.sort_order,
+        pa.status,
+        pa.created_at,
+        pa.updated_at
+        ORDER BY
+        pa.sort_order ASC,
+        pa.id ASC
+    </select>
+
+    <!-- 后台分页查询相册 -->
+    <select id="selectAdminAlbums"
+            resultMap="PhotoAlbumResultMap">
+
+        SELECT
+        <include refid="PhotoAlbumColumns"/>
+        FROM photo_album pa
+        LEFT JOIN photo p
+        ON p.album_id = pa.id
+        AND p.is_deleted = 0
+
+        <include refid="AdminPhotoAlbumWhere"/>
+
+        GROUP BY
+        pa.id,
+        pa.name,
+        pa.description,
+        pa.cover_url,
+        pa.sort_order,
+        pa.status,
+        pa.created_at,
+        pa.updated_at
+        ORDER BY
+        pa.sort_order ASC,
+        pa.id ASC
+        LIMIT #{offset}, #{size}
+    </select>
+
+    <!-- 统计后台相册数量 -->
+    <select id="countAdminAlbums"
+            resultType="long">
+
+        SELECT COUNT(1)
+        FROM photo_album pa
+
+        <include refid="AdminPhotoAlbumWhere"/>
+    </select>
+
+    <!-- 根据 ID 查询相册 -->
+    <select id="selectAdminAlbumById"
+            resultMap="PhotoAlbumResultMap">
+
+        SELECT
+        <include refid="PhotoAlbumColumns"/>
+        FROM photo_album pa
+        LEFT JOIN photo p
+        ON p.album_id = pa.id
+        AND p.is_deleted = 0
+        WHERE pa.id = #{albumId}
+        AND pa.is_deleted = 0
+        GROUP BY
+        pa.id,
+        pa.name,
+        pa.description,
+        pa.cover_url,
+        pa.sort_order,
+        pa.status,
+        pa.created_at,
+        pa.updated_at
+    </select>
+
+    <!-- 统计同名相册 -->
+    <select id="countByName"
+            resultType="long">
+
+        SELECT COUNT(*)
+        FROM photo_album
+        WHERE name = #{name}
+
+        <if test="excludeId != null">
+            AND id != #{excludeId}
+        </if>
+    </select>
+
+    <!-- 软删除相册下的全部图片 -->
+    <update id="softDeletePhotosByAlbumId">
+        UPDATE photo
+        SET is_deleted = 1,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE album_id = #{albumId}
+          AND is_deleted = 0
+    </update>
+
+</mapper>
