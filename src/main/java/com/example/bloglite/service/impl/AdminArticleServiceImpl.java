@@ -1,8 +1,11 @@
 package com.example.bloglite.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.example.bloglite.dto.AdminArticleCreateRequest;
 import com.example.bloglite.dto.AdminArticleCreateResultDTO;
+import com.example.bloglite.dto.AdminArticleDetailDTO;
 import com.example.bloglite.dto.AdminArticleListItemDTO;
+import com.example.bloglite.dto.AdminArticleUpdateRequest;
 import com.example.bloglite.dto.PageResultDTO;
 import com.example.bloglite.dto.UserDTO;
 import com.example.bloglite.entity.Article;
@@ -23,6 +26,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -125,11 +129,11 @@ public class AdminArticleServiceImpl implements AdminArticleService {
 
         int status = normalizeArticleStatus(request.getStatus());
 
-        String encodedAccessPassword =
-                normalizeAccessPassword(
-                        status,
-                        request.getAccessPassword()
-                );
+        String encodedAccessPassword = resolveAccessPassword(
+                status,
+                request.getAccessPassword(),
+                null
+        );
 
         String title = normalizeRequiredText(
                 request.getTitle(),
@@ -194,6 +198,144 @@ public class AdminArticleServiceImpl implements AdminArticleService {
     }
 
     /**
+     * 查询当前登录用户的文章编辑详情
+     */
+    @Override
+    public AdminArticleDetailDTO getArticleDetail(Long articleId) {
+        UserDTO currentUser = getCurrentUser();
+
+        getOwnedArticle(articleId, currentUser.getId());
+
+        AdminArticleDetailDTO detail =
+                adminArticleMapper.selectAdminArticleDetail(articleId);
+
+        if (detail == null) {
+            throw new BizException(40400, "文章不存在");
+        }
+
+        return detail;
+    }
+
+    /**
+     * 更新当前登录用户的文章
+     */
+    @Transactional
+    @Override
+    public AdminArticleDetailDTO updateArticle(
+            Long articleId,
+            AdminArticleUpdateRequest request
+    ) {
+        UserDTO currentUser = getCurrentUser();
+
+        Article existingArticle = getOwnedArticle(
+                articleId,
+                currentUser.getId()
+        );
+
+        List<Long> tagIds = normalizeTagIds(request.getTagIds());
+
+        validateCategory(request.getCategoryId());
+        validateTagsExist(tagIds);
+
+        int status = normalizeRequiredStatus(request.getStatus());
+
+        String encodedAccessPassword = resolveAccessPassword(
+                status,
+                request.getAccessPassword(),
+                existingArticle.getAccessPassword()
+        );
+
+        String title = normalizeRequiredText(
+                request.getTitle(),
+                "文章标题不能为空"
+        );
+
+        validateRequiredContent(request.getContent());
+
+        LocalDateTime now = LocalDateTime.now();
+
+        LocalDateTime publishedAt = resolvePublishedAt(
+                existingArticle,
+                status,
+                now
+        );
+
+        LambdaUpdateWrapper<Article> updateWrapper =
+                new LambdaUpdateWrapper<>();
+
+        updateWrapper
+                .eq(Article::getId, articleId)
+                .eq(Article::getAuthorId, currentUser.getId())
+                .eq(Article::getIsDeleted, 0)
+                .set(
+                        Article::getTitle,
+                        title
+                )
+                .set(
+                        Article::getSummary,
+                        normalizeOptionalText(request.getSummary())
+                )
+                .set(
+                        Article::getContent,
+                        request.getContent()
+                )
+                .set(
+                        Article::getCoverUrl,
+                        normalizeOptionalText(request.getCoverUrl())
+                )
+                .set(
+                        Article::getCategoryId,
+                        request.getCategoryId()
+                )
+                .set(
+                        Article::getStatus,
+                        status
+                )
+                .set(
+                        Article::getAccessPassword,
+                        encodedAccessPassword
+                )
+                .set(
+                        Article::getPublishedAt,
+                        publishedAt
+                );
+
+        int updatedRows = adminArticleMapper.update(
+                null,
+                updateWrapper
+        );
+
+        if (updatedRows < 1) {
+            throw new BizException(40400, "文章不存在");
+        }
+
+        articleTagMapper.deleteByArticleId(articleId);
+
+        if (!tagIds.isEmpty()) {
+            int tagRows = articleTagMapper.insertBatch(
+                    articleId,
+                    tagIds
+            );
+
+            if (tagRows != tagIds.size()) {
+                throw new BizException(
+                        50000,
+                        "文章标签同步失败，请稍后重试"
+                );
+            }
+        }
+
+        AdminArticleDetailDTO detail =
+                adminArticleMapper.selectAdminArticleDetail(articleId);
+
+        if (detail == null) {
+            throw new BizException(40400, "文章不存在");
+        }
+
+        return detail;
+    }
+
+    /**
      * 获取当前登录用户
      */
     private UserDTO getCurrentUser() {
@@ -210,11 +352,59 @@ public class AdminArticleServiceImpl implements AdminArticleService {
     }
 
     /**
-     * 校验并规范化文章状态
+     * 查询当前用户拥有的未删除文章
+     */
+    private Article getOwnedArticle(
+            Long articleId,
+            Long currentUserId
+    ) {
+        if (articleId == null || articleId < 1) {
+            throw new BizException(40000, "文章 ID 不正确");
+        }
+
+        Article article = adminArticleMapper.selectById(articleId);
+
+        if (article == null
+                || Integer.valueOf(1).equals(
+                article.getIsDeleted()
+        )) {
+            throw new BizException(40400, "文章不存在");
+        }
+
+        if (!Objects.equals(
+                article.getAuthorId(),
+                currentUserId
+        )) {
+            throw new BizException(
+                    40300,
+                    "无权操作这篇文章"
+            );
+        }
+
+        return article;
+    }
+
+    /**
+     * 校验并规范化新建文章状态
      */
     private int normalizeArticleStatus(Integer status) {
         if (status == null) {
             return STATUS_DRAFT;
+        }
+
+        validateStatus(status);
+        return status;
+    }
+
+    /**
+     * 校验更新文章状态
+     */
+    private int normalizeRequiredStatus(Integer status) {
+        if (status == null) {
+            throw new BizException(
+                    40000,
+                    "文章状态不能为空"
+            );
         }
 
         validateStatus(status);
@@ -237,6 +427,57 @@ public class AdminArticleServiceImpl implements AdminArticleService {
                     "文章状态只能是 1、2 或 3"
             );
         }
+    }
+
+    /**
+     * 处理访问密码
+     * 新密码为空时，密码访问文章保留原密码
+     */
+    private String resolveAccessPassword(
+            int status,
+            String accessPassword,
+            String existingPassword
+    ) {
+        if (status != STATUS_PASSWORD) {
+            return null;
+        }
+
+        String normalizedPassword =
+                normalizeOptionalText(accessPassword);
+
+        if (normalizedPassword != null) {
+            return passwordEncoder.encode(normalizedPassword);
+        }
+
+        if (existingPassword != null
+                && !existingPassword.isBlank()) {
+            return existingPassword;
+        }
+
+        throw new BizException(
+                40000,
+                "密码访问文章必须提供访问密码"
+        );
+    }
+
+    /**
+     * 处理发布时间
+     * 草稿保留原发布时间；首次发布时写入当前时间
+     */
+    private LocalDateTime resolvePublishedAt(
+            Article existingArticle,
+            int status,
+            LocalDateTime now
+    ) {
+        if (status == STATUS_DRAFT) {
+            return existingArticle.getPublishedAt();
+        }
+
+        if (existingArticle.getPublishedAt() == null) {
+            return now;
+        }
+
+        return existingArticle.getPublishedAt();
     }
 
     /**
@@ -307,30 +548,6 @@ public class AdminArticleServiceImpl implements AdminArticleService {
                     "存在不存在的标签"
             );
         }
-    }
-
-    /**
-     * 根据文章状态处理访问密码
-     */
-    private String normalizeAccessPassword(
-            int status,
-            String accessPassword
-    ) {
-        if (status != STATUS_PASSWORD) {
-            return null;
-        }
-
-        String normalizedPassword =
-                normalizeOptionalText(accessPassword);
-
-        if (normalizedPassword == null) {
-            throw new BizException(
-                    40000,
-                    "密码访问文章必须提供访问密码"
-            );
-        }
-
-        return passwordEncoder.encode(normalizedPassword);
     }
 
     /**

@@ -23,6 +23,34 @@
         <result property="updatedAt" column="updated_at"/>
     </resultMap>
 
+    <!-- 后台文章编辑详情返回结构 -->
+    <resultMap id="AdminArticleDetailResultMap"
+               type="com.example.bloglite.dto.AdminArticleDetailDTO">
+
+        <id property="id" column="id"/>
+        <result property="title" column="title"/>
+        <result property="summary" column="summary"/>
+        <result property="content" column="content"/>
+        <result property="coverUrl" column="cover_url"/>
+        <result property="categoryId" column="category_id"/>
+        <result property="categoryName" column="category_name"/>
+        <result property="status" column="status"/>
+        <result property="hasAccessPassword"
+                column="has_access_password"/>
+        <result property="isTop" column="is_top"/>
+        <result property="isFeatured" column="is_featured"/>
+        <result property="viewCount" column="view_count"/>
+        <result property="publishedAt" column="published_at"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+
+        <collection property="tags"
+                    ofType="com.example.bloglite.dto.TagDTO">
+            <id property="id" column="tag_id"/>
+            <result property="name" column="tag_name"/>
+        </collection>
+    </resultMap>
+
     <!-- 后台文章列表公共筛选条件 -->
     <sql id="AdminArticleWhere">
         WHERE a.is_deleted = 0
@@ -77,6 +105,45 @@
         FROM article a
 
         <include refid="AdminArticleWhere"/>
+    </select>
+
+    <!-- 查询后台文章编辑详情 -->
+    <select id="selectAdminArticleDetail"
+            resultMap="AdminArticleDetailResultMap">
+
+        SELECT
+            a.id,
+            a.title,
+            a.summary,
+            a.content,
+            a.cover_url,
+            a.category_id,
+            c.name AS category_name,
+            a.status,
+            CASE
+                WHEN a.access_password IS NULL
+                    OR a.access_password = ''
+                    THEN 0
+                ELSE 1
+                END AS has_access_password,
+            a.is_top,
+            a.is_featured,
+            a.view_count,
+            a.published_at,
+            a.created_at,
+            a.updated_at,
+            t.id AS tag_id,
+            t.name AS tag_name
+        FROM article a
+                 LEFT JOIN category c
+                           ON c.id = a.category_id
+                 LEFT JOIN article_tag art_tag
+                           ON art_tag.article_id = a.id
+                 LEFT JOIN tag t
+                           ON t.id = art_tag.tag_id
+        WHERE a.id = #{articleId}
+          AND a.is_deleted = 0
+        ORDER BY art_tag.id
     </select>
 
 </mapper>

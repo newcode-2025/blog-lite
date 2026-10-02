@@ -2,7 +2,9 @@ package com.example.bloglite.service;
 
 import com.example.bloglite.dto.AdminArticleCreateRequest;
 import com.example.bloglite.dto.AdminArticleCreateResultDTO;
+import com.example.bloglite.dto.AdminArticleDetailDTO;
 import com.example.bloglite.dto.AdminArticleListItemDTO;
+import com.example.bloglite.dto.AdminArticleUpdateRequest;
 import com.example.bloglite.dto.PageResultDTO;
 
 /**
@@ -25,5 +27,18 @@ public interface AdminArticleService {
      */
     AdminArticleCreateResultDTO createArticle(
             AdminArticleCreateRequest request
+    );
+
+    /**
+     * 查询当前登录用户的文章编辑详情
+     */
+    AdminArticleDetailDTO getArticleDetail(Long articleId);
+
+    /**
+     * 更新当前登录用户的文章
+     */
+    AdminArticleDetailDTO updateArticle(
+            Long articleId,
+            AdminArticleUpdateRequest request
     );
 }

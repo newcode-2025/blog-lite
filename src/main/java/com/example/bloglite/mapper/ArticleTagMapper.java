@@ -20,4 +20,11 @@ public interface ArticleTagMapper extends BaseMapper<ArticleTag> {
             @Param("articleId") Long articleId,
             @Param("tagIds") List<Long> tagIds
     );
+
+    /**
+     * 删除指定文章的全部标签关联
+     */
+    int deleteByArticleId(
+            @Param("articleId") Long articleId
+    );
 }
