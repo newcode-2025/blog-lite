@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.bloglite.mapper.AdminTagMapper">
+
+    <!-- 后台标签返回结构 -->
+    <resultMap id="AdminTagResultMap"
+               type="com.example.bloglite.dto.AdminTagDTO">
+
+        <id property="id" column="id"/>
+        <result property="name" column="name"/>
+        <result property="articleCount" column="article_count"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <!-- 查询全部标签及关联文章数量 -->
+    <select id="selectAdminTags"
+            resultMap="AdminTagResultMap">
+
+        SELECT
+            t.id,
+            t.name,
+            t.created_at,
+            t.updated_at,
+            COUNT(at.id) AS article_count
+        FROM tag t
+                 LEFT JOIN article_tag at
+        ON at.tag_id = t.id
+        GROUP BY
+            t.id,
+            t.name,
+            t.created_at,
+            t.updated_at
+        ORDER BY
+            t.id ASC
+    </select>
+
+    <!-- 根据 ID 查询标签管理数据 -->
+    <select id="selectAdminTagById"
+            resultMap="AdminTagResultMap">
+
+        SELECT
+            t.id,
+            t.name,
+            t.created_at,
+            t.updated_at,
+            COUNT(at.id) AS article_count
+        FROM tag t
+                 LEFT JOIN article_tag at
+        ON at.tag_id = t.id
+        WHERE t.id = #{tagId}
+        GROUP BY
+            t.id,
+            t.name,
+            t.created_at,
+            t.updated_at
+    </select>
+
+    <!-- 统计同名标签 -->
+    <select id="countByTagName"
+            resultType="long">
+
+        SELECT COUNT(*)
+        FROM tag
+        WHERE name = #{name}
+
+        <if test="excludeId != null">
+            AND id != #{excludeId}
+        </if>
+    </select>
+
+    <!-- 统计标签被文章引用的数量 -->
+    <select id="countArticleTagsByTagId"
+            resultType="long">
+
+        SELECT COUNT(*)
+        FROM article_tag
+        WHERE tag_id = #{tagId}
+    </select>
+
+</mapper>
