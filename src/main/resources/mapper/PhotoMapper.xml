@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.bloglite.mapper.PhotoMapper">
+
+    <!-- 相册图片返回结构 -->
+    <resultMap id="PhotoResultMap"
+               type="com.example.bloglite.dto.PhotoDTO">
+
+        <id property="id" column="id"/>
+        <result property="albumId" column="album_id"/>
+        <result property="name" column="name"/>
+        <result property="description" column="description"/>
+        <result property="photoUrl" column="photo_url"/>
+        <result property="sortOrder" column="sort_order"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <!-- 图片公共查询字段 -->
+    <sql id="PhotoColumns">
+        p.id,
+        p.album_id,
+        p.name,
+        p.description,
+        p.photo_url,
+        p.sort_order,
+        p.created_at,
+        p.updated_at
+    </sql>
+
+    <!-- 分页查询公开相册中的图片 -->
+    <select id="selectPublicPhotos"
+            resultMap="PhotoResultMap">
+
+        SELECT
+        <include refid="PhotoColumns"/>
+        FROM photo p
+        JOIN photo_album pa
+        ON pa.id = p.album_id
+        WHERE p.album_id = #{albumId}
+        AND p.is_deleted = 0
+        AND pa.is_deleted = 0
+        AND pa.status = 1
+        ORDER BY
+        p.sort_order ASC,
+        p.id ASC
+        LIMIT #{offset}, #{size}
+    </select>
+
+    <!-- 统计公开相册中的图片数量 -->
+    <select id="countPublicPhotos"
+            resultType="long">
+
+        SELECT COUNT(1)
+        FROM photo p
+        JOIN photo_album pa
+        ON pa.id = p.album_id
+        WHERE p.album_id = #{albumId}
+        AND p.is_deleted = 0
+        AND pa.is_deleted = 0
+        AND pa.status = 1
+    </select>
+
+    <!-- 后台分页查询相册中的图片 -->
+    <select id="selectAdminPhotos"
+            resultMap="PhotoResultMap">
+
+        SELECT
+        <include refid="PhotoColumns"/>
+        FROM photo p
+        WHERE p.album_id = #{albumId}
+        AND p.is_deleted = 0
+        ORDER BY
+        p.sort_order ASC,
+        p.id ASC
+        LIMIT #{offset}, #{size}
+    </select>
+
+    <!-- 统计后台相册中的图片数量 -->
+    <select id="countAdminPhotos"
+            resultType="long">
+
+        SELECT COUNT(1)
+        FROM photo
+        WHERE album_id = #{albumId}
+        AND is_deleted = 0
+    </select>
+
+    <!-- 根据 ID 查询后台图片数据 -->
+    <select id="selectAdminPhotoById"
+            resultMap="PhotoResultMap">
+
+        SELECT
+        <include refid="PhotoColumns"/>
+        FROM photo p
+        WHERE p.id = #{photoId}
+        AND p.is_deleted = 0
+    </select>
+
+</mapper>
