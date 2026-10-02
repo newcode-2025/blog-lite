@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.bloglite.mapper.AdminCommentMapper">
+
+    <!-- 后台评论返回结构 -->
+    <resultMap id="AdminCommentResultMap"
+               type="com.example.bloglite.dto.AdminCommentDTO">
+
+        <id property="id" column="id"/>
+        <result property="articleId" column="article_id"/>
+        <result property="articleTitle" column="article_title"/>
+        <result property="parentId" column="parent_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="nickname" column="nickname"/>
+        <result property="avatarUrl" column="avatar_url"/>
+        <result property="replyToUserId"
+                column="reply_to_user_id"/>
+        <result property="replyToNickname"
+                column="reply_to_nickname"/>
+        <result property="content" column="content"/>
+        <result property="status" column="status"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <!-- 后台评论公共筛选条件 -->
+    <sql id="AdminCommentWhere">
+        WHERE a.author_id = #{authorId}
+        AND c.is_deleted = 0
+
+        <if test="articleId != null">
+            AND c.article_id = #{articleId}
+        </if>
+
+        <if test="status != null">
+            AND c.status = #{status}
+        </if>
+
+        <if test="keywords != null and keywords != ''">
+            AND (
+            c.content LIKE CONCAT('%', #{keywords}, '%')
+            OR a.title LIKE CONCAT('%', #{keywords}, '%')
+            )
+        </if>
+    </sql>
+
+    <!-- 分页查询当前用户文章下的评论 -->
+    <select id="selectAdminComments"
+            resultMap="AdminCommentResultMap">
+
+        SELECT
+        c.id,
+        c.article_id,
+        a.title AS article_title,
+        c.parent_id,
+        c.user_id,
+        u.nickname,
+        u.avatar_url,
+        c.reply_to_user_id,
+        reply_user.nickname AS reply_to_nickname,
+        c.content,
+        c.status,
+        c.created_at
+        FROM article_comment c
+        JOIN article a
+        ON a.id = c.article_id
+        JOIN user_account u
+        ON u.id = c.user_id
+        LEFT JOIN user_account reply_user
+        ON reply_user.id = c.reply_to_user_id
+
+        <include refid="AdminCommentWhere"/>
+
+        ORDER BY
+        c.created_at DESC,
+        c.id DESC
+        LIMIT #{offset}, #{size}
+    </select>
+
+    <!-- 统计当前用户文章下的评论数量 -->
+    <select id="countAdminComments"
+            resultType="long">
+
+        SELECT COUNT(1)
+        FROM article_comment c
+        JOIN article a
+        ON a.id = c.article_id
+
+        <include refid="AdminCommentWhere"/>
+    </select>
+
+</mapper>
