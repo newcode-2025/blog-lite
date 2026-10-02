@@ -70,7 +70,8 @@ public class SecurityConfig {
                                 "/api/v1/articles/**",
                                 "/api/v1/categories/**",
                                 "/api/v1/tags/**",
-                                "/api/v1/archives/**"
+                                "/api/v1/archives/**",
+                                "/api/v1/talks/**"
                         ).permitAll()
 
                         // 其他接口需要登录

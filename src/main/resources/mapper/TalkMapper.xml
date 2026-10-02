@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.bloglite.mapper.TalkMapper">
+
+    <!-- 说说返回结构 -->
+    <resultMap id="TalkResultMap"
+               type="com.example.bloglite.dto.TalkDTO">
+
+        <id property="id" column="id"/>
+        <result property="userId" column="user_id"/>
+        <result property="nickname" column="nickname"/>
+        <result property="avatarUrl" column="avatar_url"/>
+        <result property="content" column="content"/>
+        <result property="images"
+                column="images"
+                typeHandler="com.example.bloglite.typehandler.TalkImageListTypeHandler"/>
+        <result property="isTop" column="is_top"/>
+        <result property="status" column="status"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <!-- 说说公共查询字段 -->
+    <sql id="TalkColumns">
+        t.id,
+        t.user_id,
+        u.nickname,
+        u.avatar_url,
+        t.content,
+        t.images,
+        t.is_top,
+        t.status,
+        t.created_at,
+        t.updated_at
+    </sql>
+
+    <!-- 后台说说公共筛选条件 -->
+    <sql id="AdminTalkWhere">
+        WHERE t.is_deleted = 0
+
+        <if test="status != null">
+            AND t.status = #{status}
+        </if>
+
+        <if test="keywords != null and keywords != ''">
+            AND t.content LIKE CONCAT('%', #{keywords}, '%')
+        </if>
+    </sql>
+
+    <!-- 分页查询公开说说 -->
+    <select id="selectPublicTalks"
+            resultMap="TalkResultMap">
+
+        SELECT
+        <include refid="TalkColumns"/>
+        FROM talk t
+        JOIN user_account u
+        ON u.id = t.user_id
+        WHERE t.status = 1
+        AND t.is_deleted = 0
+        ORDER BY
+        t.is_top DESC,
+        t.created_at DESC,
+        t.id DESC
+        LIMIT #{offset}, #{size}
+    </select>
+
+    <!-- 统计公开说说数量 -->
+    <select id="countPublicTalks"
+            resultType="long">
+
+        SELECT COUNT(1)
+        FROM talk
+        WHERE status = 1
+          AND is_deleted = 0
+    </select>
+
+    <!-- 后台分页查询说说 -->
+    <select id="selectAdminTalks"
+            resultMap="TalkResultMap">
+
+        SELECT
+        <include refid="TalkColumns"/>
+        FROM talk t
+        JOIN user_account u
+        ON u.id = t.user_id
+
+        <include refid="AdminTalkWhere"/>
+
+        ORDER BY
+        t.is_top DESC,
+        t.created_at DESC,
+        t.id DESC
+        LIMIT #{offset}, #{size}
+    </select>
+
+    <!-- 统计后台说说数量 -->
+    <select id="countAdminTalks"
+            resultType="long">
+
+        SELECT COUNT(1)
+        FROM talk t
+
+        <include refid="AdminTalkWhere"/>
+    </select>
+
+    <!-- 根据 ID 查询后台说说数据 -->
+    <select id="selectAdminTalkById"
+            resultMap="TalkResultMap">
+
+        SELECT
+        <include refid="TalkColumns"/>
+        FROM talk t
+        JOIN user_account u
+        ON u.id = t.user_id
+        WHERE t.id = #{talkId}
+        AND t.is_deleted = 0
+    </select>
+
+</mapper>
