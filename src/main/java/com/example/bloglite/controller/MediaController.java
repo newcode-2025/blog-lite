@@ -11,6 +11,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
+
 /**
  * 后台媒体上传接口
  */
@@ -38,6 +40,25 @@ public class MediaController {
         return ApiResponse.success(
                 mediaStorageService.upload(
                         file,
+                        MediaScene.fromCode(scene)
+                )
+        );
+    }
+
+    /**
+     * 批量上传图片
+     */
+    @PostMapping(
+            value = "/images/batch",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
+    public ApiResponse<List<MediaUploadResultDTO>> uploadImages(
+            @RequestParam("files") List<MultipartFile> files,
+            @RequestParam("scene") String scene
+    ) {
+        return ApiResponse.success(
+                mediaStorageService.uploadBatch(
+                        files,
                         MediaScene.fromCode(scene)
                 )
         );

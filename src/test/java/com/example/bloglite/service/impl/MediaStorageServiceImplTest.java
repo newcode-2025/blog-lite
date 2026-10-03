@@ -16,9 +16,12 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -96,5 +99,66 @@ class MediaStorageServiceImplTest {
             return outputStream.toByteArray();
         }
     }
-}
 
+    @Test
+    void shouldUploadBatchImagesWithoutOverwriting() throws Exception {
+        MockMultipartFile first = new MockMultipartFile(
+                "files",
+                "first.png",
+                "image/png",
+                createPngBytes()
+        );
+        MockMultipartFile second = new MockMultipartFile(
+                "files",
+                "second.png",
+                "image/png",
+                createPngBytes()
+        );
+
+        List<MediaUploadResultDTO> results = mediaStorageService.uploadBatch(
+                List.of(first, second),
+                MediaScene.TALK
+        );
+
+        assertEquals(2, results.size());
+        assertNotEquals(results.get(0).getUrl(), results.get(1).getUrl());
+        assertTrue(Files.exists(temporaryDirectory.resolve(
+                results.get(0).getUrl().substring("/uploads/".length())
+        )));
+        assertTrue(Files.exists(temporaryDirectory.resolve(
+                results.get(1).getUrl().substring("/uploads/".length())
+        )));
+    }
+
+    @Test
+    void shouldRejectBatchBeforeWritingWhenOneImageIsInvalid() throws Exception {
+        MockMultipartFile valid = new MockMultipartFile(
+                "files",
+                "valid.png",
+                "image/png",
+                createPngBytes()
+        );
+        MockMultipartFile invalid = new MockMultipartFile(
+                "files",
+                "invalid.png",
+                "image/png",
+                "not-an-image".getBytes()
+        );
+
+        assertThrows(
+                com.example.bloglite.exception.BizException.class,
+                () -> mediaStorageService.uploadBatch(
+                        List.of(valid, invalid),
+                        MediaScene.TALK
+                )
+        );
+
+        long storedFileCount;
+        try (var paths = Files.walk(temporaryDirectory)) {
+            storedFileCount = paths
+                    .filter(Files::isRegularFile)
+                    .count();
+        }
+
+        assertEquals(0, storedFileCount);
+    }}
