@@ -53,4 +53,24 @@ public class AsyncConfig {
         executor.initialize();
         return executor;
     }
+
+    /**
+     * 邮件通知专用线程池
+     */
+    @Bean(name = "mailExecutor")
+    public ThreadPoolTaskExecutor mailExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(1);
+        executor.setMaxPoolSize(3);
+        executor.setQueueCapacity(200);
+        executor.setKeepAliveSeconds(60);
+        executor.setThreadNamePrefix("mail-task-");
+        executor.setWaitForTasksToCompleteOnShutdown(true);
+        executor.setAwaitTerminationSeconds(10);
+        executor.setRejectedExecutionHandler(
+                new ThreadPoolExecutor.CallerRunsPolicy()
+        );
+        executor.initialize();
+        return executor;
+    }
 }

@@ -29,6 +29,23 @@ spring:
       # 单次请求最大 20MB，供批量上传使用
       max-request-size: 20MB
 
+  # SMTP 邮件配置，默认关闭，生产环境通过环境变量启用
+  mail:
+    host: "${BLOG_MAIL_HOST:}"
+    port: "${BLOG_MAIL_PORT:25}"
+    username: "${BLOG_MAIL_USERNAME:}"
+    password: "${BLOG_MAIL_PASSWORD:}"
+    default-encoding: UTF-8
+    properties:
+      mail:
+        smtp:
+          auth: "${BLOG_MAIL_SMTP_AUTH:false}"
+          starttls:
+            enable: "${BLOG_MAIL_STARTTLS:false}"
+        connectiontimeout: 5000
+        timeout: 5000
+        writetimeout: 5000
+
   # Quartz 使用内存任务存储，数据库中的 scheduled_job 是任务定义的唯一来源
   quartz:
     job-store-type: memory
@@ -68,6 +85,12 @@ blog:
 
     # 令牌有效期，单位：分钟
     expiration-minutes: 120
+
+  # 邮件业务配置
+  mail:
+    enabled: "${BLOG_MAIL_ENABLED:false}"
+    from: "${BLOG_MAIL_FROM:}"
+    from-name: "${BLOG_MAIL_FROM_NAME:blog-lite}"
 
   # 网站访问统计配置
   stats:
