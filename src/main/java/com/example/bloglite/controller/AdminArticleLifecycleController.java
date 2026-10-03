@@ -8,6 +8,7 @@ import com.example.bloglite.dto.AdminArticleStatusUpdateRequest;
 import com.example.bloglite.dto.PageResultDTO;
 import com.example.bloglite.service.AdminArticleLifecycleService;
 import jakarta.validation.Valid;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -21,6 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
  * 后台文章生命周期接口
  */
 @RestController
+@PreAuthorize("hasAnyRole('ADMIN','USER')")
 @RequestMapping("/api/v1/admin/articles")
 public class AdminArticleLifecycleController {
 

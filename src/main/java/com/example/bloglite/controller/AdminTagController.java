@@ -6,6 +6,7 @@ import com.example.bloglite.dto.AdminTagDTO;
 import com.example.bloglite.dto.AdminTagUpdateRequest;
 import com.example.bloglite.service.AdminTagService;
 import jakarta.validation.Valid;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -21,6 +22,7 @@ import java.util.List;
  * 后台标签管理接口
  */
 @RestController
+@PreAuthorize("hasRole('ADMIN')")
 @RequestMapping("/api/v1/admin/tags")
 public class AdminTagController {
 

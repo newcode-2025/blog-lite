@@ -2,14 +2,19 @@ package com.example.bloglite.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.example.bloglite.dto.LoginDTO;
 import com.example.bloglite.dto.LoginRequest;
 import com.example.bloglite.dto.RegisterRequest;
 import com.example.bloglite.dto.UpdateProfileRequest;
 import com.example.bloglite.dto.UserDTO;
+import com.example.bloglite.entity.Role;
 import com.example.bloglite.entity.UserAccount;
+import com.example.bloglite.entity.UserRole;
 import com.example.bloglite.exception.BizException;
+import com.example.bloglite.mapper.RoleMapper;
 import com.example.bloglite.mapper.UserAccountMapper;
+import com.example.bloglite.mapper.UserRoleMapper;
 import com.example.bloglite.service.JwtService;
 import com.example.bloglite.service.UserAccountService;
 import org.springframework.dao.DuplicateKeyException;
@@ -30,20 +35,29 @@ public class UserAccountServiceImpl implements UserAccountService {
      */
     private static final int STATUS_ENABLED = 1;
 
+    private static final String DEFAULT_ROLE_CODE = "USER";
+
     private final UserAccountMapper userAccountMapper;
+    private final RoleMapper roleMapper;
+    private final UserRoleMapper userRoleMapper;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
 
     public UserAccountServiceImpl(
             UserAccountMapper userAccountMapper,
+            RoleMapper roleMapper,
+            UserRoleMapper userRoleMapper,
             PasswordEncoder passwordEncoder,
             JwtService jwtService
     ) {
         this.userAccountMapper = userAccountMapper;
+        this.roleMapper = roleMapper;
+        this.userRoleMapper = userRoleMapper;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
     }
 
+    @Transactional
     @Override
     public UserDTO register(RegisterRequest request) {
         if (request == null) {
@@ -94,6 +108,8 @@ public class UserAccountServiceImpl implements UserAccountService {
         if (affectedRows != 1) {
             throw new BizException(50000, "注册失败，请稍后重试");
         }
+
+        assignDefaultRole(userAccount.getId(), now);
 
         return toUserDTO(userAccount);
     }
@@ -256,6 +272,37 @@ public class UserAccountServiceImpl implements UserAccountService {
     /**
      * 将空字符串统一转换为 null
      */
+    /**
+     * 为新注册用户分配默认普通用户角色
+     */
+    private void assignDefaultRole(Long userId, LocalDateTime now) {
+        Role defaultRole = roleMapper.selectOne(
+                Wrappers.<Role>lambdaQuery()
+                        .eq(Role::getRoleCode, DEFAULT_ROLE_CODE)
+                        .eq(Role::getStatus, STATUS_ENABLED)
+        );
+
+        if (defaultRole == null) {
+            throw new BizException(
+                    50000,
+                    "默认用户角色不存在，请联系管理员"
+            );
+        }
+
+        UserRole userRole = new UserRole();
+        userRole.setUserId(userId);
+        userRole.setRoleId(defaultRole.getId());
+        userRole.setCreatedAt(now);
+
+        int roleRows = userRoleMapper.insert(userRole);
+
+        if (roleRows != 1) {
+            throw new BizException(
+                    50000,
+                    "默认用户角色分配失败，请稍后重试"
+            );
+        }
+    }
     private String normalizeNullableText(String value) {
         if (value == null) {
             return null;

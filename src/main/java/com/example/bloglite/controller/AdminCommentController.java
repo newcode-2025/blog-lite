@@ -6,6 +6,7 @@ import com.example.bloglite.dto.BatchReviewCommentsRequest;
 import com.example.bloglite.dto.PageResultDTO;
 import com.example.bloglite.service.AdminCommentService;
 import jakarta.validation.Valid;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
  * 后台评论管理接口
  */
 @RestController
+@PreAuthorize("hasRole('ADMIN')")
 @RequestMapping("/api/v1/admin/comments")
 public class AdminCommentController {
 
