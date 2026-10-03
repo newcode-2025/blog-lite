@@ -11,5 +11,8 @@ project-context/
 sql/
 HELP.md
 
+# 测试源码不提交
+src/test/
+
 # 本地上传文件
 uploads/
