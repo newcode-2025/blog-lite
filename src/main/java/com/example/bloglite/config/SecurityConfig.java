@@ -1,6 +1,7 @@
 package com.example.bloglite.config;
 
 import com.example.bloglite.security.JwtAuthenticationFilter;
+import com.example.bloglite.security.ResourceAuthorizationFilter;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -26,10 +27,14 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
+    private final ResourceAuthorizationFilter resourceAuthorizationFilter;
+
     public SecurityConfig(
-            JwtAuthenticationFilter jwtAuthenticationFilter
+            JwtAuthenticationFilter jwtAuthenticationFilter,
+            ResourceAuthorizationFilter resourceAuthorizationFilter
     ) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+        this.resourceAuthorizationFilter = resourceAuthorizationFilter;
     }
 
     @Bean
@@ -78,8 +83,8 @@ public class SecurityConfig {
                                 "/api/v1/albums/**"
                         ).permitAll()
 
-                        // 其他接口需要登录
-                        .anyRequest().authenticated()
+                        // 其他接口交给 ResourceAuthorizationFilter 进行统一动态授权
+                        .anyRequest().permitAll()
                 )
 
                 .exceptionHandling(exception -> exception
@@ -132,6 +137,10 @@ public class SecurityConfig {
                 .addFilterBefore(
                         jwtAuthenticationFilter,
                         UsernamePasswordAuthenticationFilter.class
+                )
+                .addFilterAfter(
+                        resourceAuthorizationFilter,
+                        JwtAuthenticationFilter.class
                 );
 
         return http.build();
