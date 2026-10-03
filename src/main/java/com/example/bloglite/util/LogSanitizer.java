@@ -24,6 +24,10 @@ public final class LogSanitizer {
             "(?i)(\"[^\"]*(?:password|token|secret|authorization|cookie)[^\"]*\"\\s*:\\s*)\"(?:\\\\.|[^\"\\\\])*\""
     );
 
+    private static final Pattern SENSITIVE_QUERY_PATTERN = Pattern.compile(
+            "(?i)(^|[&?])((?:password|token|secret|authorization|cookie)[^=&\\s]*)=([^&\\s]*)"
+    );
+
     private LogSanitizer() {
     }
 
@@ -60,8 +64,22 @@ public final class LogSanitizer {
         }
 
         String json = parts.isEmpty() ? "" : String.join(", ", parts);
-        Matcher matcher = SENSITIVE_FIELD_PATTERN.matcher(json);
+        return sanitizeText(json);
+    }
+
+    /**
+     * 对普通文本进行敏感字段脱敏和长度截断
+     */
+    public static String sanitizeText(String text) {
+        if (text == null || text.isBlank()) {
+            return "";
+        }
+
+        Matcher matcher = SENSITIVE_FIELD_PATTERN.matcher(text);
         String sanitized = matcher.replaceAll("$1\"***\"");
+        sanitized = SENSITIVE_QUERY_PATTERN
+                .matcher(sanitized)
+                .replaceAll("$1$2=***");
 
         if (sanitized.length() <= MAX_LOG_LENGTH) {
             return sanitized;

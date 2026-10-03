@@ -33,4 +33,24 @@ public class AsyncConfig {
         executor.initialize();
         return executor;
     }
+
+    /**
+     * 异常日志专用线程池
+     */
+    @Bean(name = "exceptionLogExecutor")
+    public ThreadPoolTaskExecutor exceptionLogExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(1);
+        executor.setMaxPoolSize(2);
+        executor.setQueueCapacity(500);
+        executor.setKeepAliveSeconds(60);
+        executor.setThreadNamePrefix("exception-log-");
+        executor.setWaitForTasksToCompleteOnShutdown(true);
+        executor.setAwaitTerminationSeconds(10);
+        executor.setRejectedExecutionHandler(
+                new ThreadPoolExecutor.CallerRunsPolicy()
+        );
+        executor.initialize();
+        return executor;
+    }
 }

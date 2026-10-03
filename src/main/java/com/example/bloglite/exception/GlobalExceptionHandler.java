@@ -1,18 +1,20 @@
 package com.example.bloglite.exception;
 
 import com.example.bloglite.common.ApiResponse;
+import com.example.bloglite.service.ExceptionLogService;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.MultipartException;
-import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 /**
  * 全局异常处理器
@@ -20,6 +22,12 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    private final ExceptionLogService exceptionLogService;
+
+    public GlobalExceptionHandler(ExceptionLogService exceptionLogService) {
+        this.exceptionLogService = exceptionLogService;
+    }
 
     /**
      * 处理 @Valid 请求体参数校验失败
@@ -77,7 +85,14 @@ public class GlobalExceptionHandler {
      * 处理明确抛出的业务异常
      */
     @ExceptionHandler(BizException.class)
-    public ApiResponse<Void> handleBizException(BizException exception) {
+    public ApiResponse<Void> handleBizException(
+            HttpServletRequest request,
+            BizException exception
+    ) {
+        if (exception.getCode() >= 50000) {
+            recordSafely(request, exception);
+        }
+
         return ApiResponse.error(
                 exception.getCode(),
                 exception.getMessage()
@@ -103,6 +118,7 @@ public class GlobalExceptionHandler {
     ) {
         return ApiResponse.error(40000, exception.getMessage());
     }
+
     /**
      * 处理 Multipart 文件大小超过 Spring 配置上限
      */
@@ -122,14 +138,31 @@ public class GlobalExceptionHandler {
     ) {
         return ApiResponse.error(40000, "上传请求格式不正确");
     }
-/**
+
+    /**
      * 处理未预料到的系统异常
      */
     @ExceptionHandler(Exception.class)
-    public ApiResponse<Void> handleException(Exception exception) {
+    public ApiResponse<Void> handleException(
+            HttpServletRequest request,
+            Exception exception
+    ) {
         log.error("系统未处理异常", exception);
+        recordSafely(request, exception);
         return ApiResponse.error(50000, "系统繁忙，请稍后重试");
     }
+
+    /**
+     * 异常日志写入失败时只记录应用日志，不覆盖原始异常响应
+     */
+    private void recordSafely(
+            HttpServletRequest request,
+            Throwable throwable
+    ) {
+        try {
+            exceptionLogService.recordException(request, throwable);
+        } catch (RuntimeException logException) {
+            log.error("异常日志记录失败", logException);
+        }
+    }
 }
-
-
