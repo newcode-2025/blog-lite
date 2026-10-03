@@ -3,19 +3,21 @@ package com.example.bloglite.security;
 import com.example.bloglite.dto.UserDTO;
 import com.example.bloglite.exception.BizException;
 import com.example.bloglite.service.JwtService;
+import com.example.bloglite.service.RoleService;
 import com.example.bloglite.service.UserAccountService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.Collections;
+import java.util.List;
 
 /**
  * JWT 认证过滤器
@@ -27,16 +29,20 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private static final int STATUS_ENABLED = 1;
     private static final String AUTHORIZATION_HEADER = "Authorization";
     private static final String BEARER_PREFIX = "Bearer ";
+    private static final String ROLE_PREFIX = "ROLE_";
 
     private final JwtService jwtService;
     private final UserAccountService userAccountService;
+    private final RoleService roleService;
 
     public JwtAuthenticationFilter(
             JwtService jwtService,
-            UserAccountService userAccountService
+            UserAccountService userAccountService,
+            RoleService roleService
     ) {
         this.jwtService = jwtService;
         this.userAccountService = userAccountService;
+        this.roleService = roleService;
     }
 
     @Override
@@ -79,6 +85,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             }
 
             /*
+             * 每次请求都重新查询启用角色，角色移除或禁用后无需重新签发 token。
+             */
+            List<SimpleGrantedAuthority> authorities =
+                    roleService.listEnabledRoleCodesByUserId(userId)
+                            .stream()
+                            .map(roleCode ->
+                                    new SimpleGrantedAuthority(
+                                            ROLE_PREFIX + roleCode
+                                    )
+                            )
+                            .toList();
+
+            /*
              * 认证凭证的第一个参数是 principal。
              * 这里直接把脱敏 UserDTO 作为当前登录用户。
              */
@@ -86,7 +105,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     new UsernamePasswordAuthenticationToken(
                             user,
                             null,
-                            Collections.emptyList()
+                            authorities
                     );
 
             authentication.setDetails(
