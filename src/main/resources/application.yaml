@@ -22,6 +22,13 @@ spring:
       max-lifetime: 1800000
       connection-test-query: SELECT 1
 
+  servlet:
+    multipart:
+      # 单个上传文件最大 10MB
+      max-file-size: 10MB
+      # 单次请求最大 20MB，供批量上传使用
+      max-request-size: 20MB
+
 # MyBatis-Plus 配置
 mybatis-plus:
   # XML Mapper 文件位置
@@ -56,3 +63,18 @@ blog:
 
     # 令牌有效期，单位：分钟
     expiration-minutes: 120
+
+  # 本地上传配置
+  upload:
+    # 保存目录可通过环境变量覆盖
+    local-dir: "${BLOG_UPLOAD_DIR:./uploads}"
+    # 静态访问前缀
+    public-path: "${BLOG_UPLOAD_PUBLIC_PATH:/uploads}"
+    # 对外访问根地址
+    public-base-url: "${BLOG_UPLOAD_PUBLIC_BASE_URL:http://localhost:8081}"
+    # 单张图片业务层大小限制
+    max-file-size: 10MB
+    # 单次最多上传图片数量
+    max-batch-count: 9
+    # 单张图片最大像素总数，用于防止异常大图占用过多内存
+    max-image-pixels: 40000000
