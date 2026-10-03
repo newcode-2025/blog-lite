@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>blog-lite 通知重试</title>
+</head>
+<body style="margin:0;padding:24px;background:#f5f7fa;font-family:Arial,'Microsoft YaHei',sans-serif;color:#1f2937;">
+<div style="max-width:640px;margin:0 auto;background:#ffffff;border-radius:12px;padding:32px;border:1px solid #e5e7eb;">
+    <h2 style="margin-top:0;color:#2563eb;">评论通知重试成功</h2>
+    <p>此前未成功发送的评论通知已完成重试。</p>
+    <p>通知类型：<span th:text="${notificationType}">COMMENT_APPROVED</span></p>
+    <p>业务 ID：<span th:text="${businessId}">1</span></p>
+    <p style="font-size:13px;color:#9ca3af;">此邮件由 blog-lite 自动发送，无需直接回复。</p>
+</div>
+</body>
+</html>

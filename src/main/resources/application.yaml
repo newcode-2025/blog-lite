@@ -97,6 +97,14 @@ blog:
     # 生产环境通过 BLOG_STATS_VISITOR_HASH_SALT 覆盖
     visitor-hash-salt: "${BLOG_STATS_VISITOR_HASH_SALT:${BLOG_STATS_VISITOR_HASH_SALT:}}"
 
+  # 内置任务和日志保留配置
+  tasks:
+    operation-log-retention-days: 30
+    exception-log-retention-days: 90
+    job-log-retention-days: 30
+    notification-retry-max-count: 3
+    notification-retry-batch-size: 50
+
   # 本地上传配置
   upload:
     # 固定保存在项目根目录的 uploads 下，保证克隆项目后即可使用
