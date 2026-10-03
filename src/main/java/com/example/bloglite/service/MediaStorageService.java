@@ -26,4 +26,8 @@ public interface MediaStorageService {
             List<MultipartFile> files,
             MediaScene scene
     );
-}
+
+    /**
+     * 根据公开 URL 删除已上传文件
+     */
+    void deleteByUrl(String url);}

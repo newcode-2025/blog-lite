@@ -133,6 +133,10 @@ public class MediaStorageServiceImpl implements MediaStorageService {
     }
 
     private String buildPublicUrl(String relativePath) {
+        return normalizePublicPath() + "/" + relativePath;
+    }
+
+    private String normalizePublicPath() {
         String publicPath = uploadProperties.getPublicPath()
                 .trim()
                 .replace('\\', '/');
@@ -145,7 +149,7 @@ public class MediaStorageServiceImpl implements MediaStorageService {
             publicPath = publicPath.substring(0, publicPath.length() - 1);
         }
 
-        return publicPath + "/" + relativePath;
+        return publicPath;
     }
 
     private void validateScene(MediaScene scene) {
@@ -171,5 +175,39 @@ public class MediaStorageServiceImpl implements MediaStorageService {
             String relativePath,
             ValidatedImage validatedImage
     ) {
+    }
+
+    @Override
+    public void deleteByUrl(String url) {
+        String relativePath = toRelativePath(url);
+
+        if (mediaFileStorage.resolve(relativePath).isEmpty()) {
+            throw new BizException(40000, "媒体文件地址不合法");
+        }
+
+        mediaFileStorage.delete(relativePath);
+    }
+
+    private String toRelativePath(String url) {
+        if (url == null || url.trim().isEmpty()) {
+            throw new BizException(40000, "媒体文件地址不能为空");
+        }
+
+        String normalizedUrl = url.trim().replace('\\', '/');
+        String publicPath = normalizePublicPath();
+
+        if (!normalizedUrl.startsWith(publicPath + "/")) {
+            throw new BizException(40000, "媒体文件地址不属于本地上传目录");
+        }
+
+        String relativePath = normalizedUrl.substring(
+                publicPath.length() + 1
+        );
+
+        if (relativePath.isEmpty()) {
+            throw new BizException(40000, "媒体文件地址不合法");
+        }
+
+        return relativePath;
     }
 }
