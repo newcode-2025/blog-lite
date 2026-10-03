@@ -10,6 +10,8 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.MultipartException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 /**
@@ -101,8 +103,26 @@ public class GlobalExceptionHandler {
     ) {
         return ApiResponse.error(40000, exception.getMessage());
     }
+    /**
+     * 处理 Multipart 文件大小超过 Spring 配置上限
+     */
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ApiResponse<Void> handleMaxUploadSizeExceededException(
+            MaxUploadSizeExceededException exception
+    ) {
+        return ApiResponse.error(41300, "上传文件超过大小限制");
+    }
 
     /**
+     * 处理其他 Multipart 请求异常
+     */
+    @ExceptionHandler(MultipartException.class)
+    public ApiResponse<Void> handleMultipartException(
+            MultipartException exception
+    ) {
+        return ApiResponse.error(40000, "上传请求格式不正确");
+    }
+/**
      * 处理未预料到的系统异常
      */
     @ExceptionHandler(Exception.class)
@@ -111,3 +131,5 @@ public class GlobalExceptionHandler {
         return ApiResponse.error(50000, "系统繁忙，请稍后重试");
     }
 }
+
+
