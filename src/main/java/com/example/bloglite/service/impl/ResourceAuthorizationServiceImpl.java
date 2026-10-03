@@ -211,8 +211,18 @@ public class ResourceAuthorizationServiceImpl
             return true;
         }
 
+        if ("POST".equalsIgnoreCase(httpMethod)
+                && "/api/v1/stats/report".equals(requestUri)) {
+            return true;
+        }
+
         if (!"GET".equalsIgnoreCase(httpMethod)) {
             return false;
+        }
+
+        if (requestUri.equals("/api/v1/site")
+                || requestUri.startsWith("/api/v1/site/")) {
+            return true;
         }
 
         if (isUploadedFilePath(requestUri)) {

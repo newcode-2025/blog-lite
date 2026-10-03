@@ -80,6 +80,16 @@ public class SecurityConfig {
                                 HttpMethod.GET,
                                 uploadProperties.getPublicPath() + "/**"
                         ).permitAll()
+
+                        // 公开站点信息和匿名访问上报
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/v1/site/**"
+                        ).permitAll()
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/v1/stats/report"
+                        ).permitAll()
                         // 公开阅读接口允许匿名访问
                         .requestMatchers(
                                 HttpMethod.GET,
