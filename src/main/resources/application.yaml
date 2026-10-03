@@ -69,6 +69,11 @@ blog:
     # 令牌有效期，单位：分钟
     expiration-minutes: 120
 
+  # 网站访问统计配置
+  stats:
+    # 生产环境通过 BLOG_STATS_VISITOR_HASH_SALT 覆盖
+    visitor-hash-salt: "${BLOG_STATS_VISITOR_HASH_SALT:${BLOG_STATS_VISITOR_HASH_SALT:}}"
+
   # 本地上传配置
   upload:
     # 固定保存在项目根目录的 uploads 下，保证克隆项目后即可使用
