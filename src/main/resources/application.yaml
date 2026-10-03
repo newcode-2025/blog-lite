@@ -66,12 +66,10 @@ blog:
 
   # 本地上传配置
   upload:
-    # 保存目录可通过环境变量覆盖
-    local-dir: "${BLOG_UPLOAD_DIR:./uploads}"
-    # 静态访问前缀
-    public-path: "${BLOG_UPLOAD_PUBLIC_PATH:/uploads}"
-    # 对外访问根地址
-    public-base-url: "${BLOG_UPLOAD_PUBLIC_BASE_URL:http://localhost:8081}"
+    # 固定保存在项目根目录的 uploads 下，保证克隆项目后即可使用
+    local-dir: "./uploads"
+    # 本项目内置的静态访问前缀
+    public-path: "/uploads"
     # 单张图片业务层大小限制
     max-file-size: 10MB
     # 单次最多上传图片数量

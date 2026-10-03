@@ -29,12 +29,16 @@ public class SecurityConfig {
 
     private final ResourceAuthorizationFilter resourceAuthorizationFilter;
 
+    private final UploadProperties uploadProperties;
+
     public SecurityConfig(
             JwtAuthenticationFilter jwtAuthenticationFilter,
-            ResourceAuthorizationFilter resourceAuthorizationFilter
+            ResourceAuthorizationFilter resourceAuthorizationFilter,
+            UploadProperties uploadProperties
     ) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
         this.resourceAuthorizationFilter = resourceAuthorizationFilter;
+        this.uploadProperties = uploadProperties;
     }
 
     @Bean
@@ -71,6 +75,11 @@ public class SecurityConfig {
                                 "/**"
                         ).permitAll()
 
+                        // 已上传的静态图片允许匿名读取
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                uploadProperties.getPublicPath() + "/**"
+                        ).permitAll()
                         // 公开阅读接口允许匿名访问
                         .requestMatchers(
                                 HttpMethod.GET,

@@ -32,12 +32,6 @@ public class UploadProperties {
     private String publicPath;
 
     /**
-     * 对外访问地址根路径
-     */
-    @NotBlank(message = "上传访问地址不能为空")
-    private String publicBaseUrl;
-
-    /**
      * 单张图片允许的最大字节数
      */
     @NotNull(message = "单张图片大小限制不能为空")
@@ -55,4 +49,3 @@ public class UploadProperties {
     @Min(value = 1, message = "图片像素限制必须大于 0")
     private long maxImagePixels;
 }
-

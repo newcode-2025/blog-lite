@@ -1,6 +1,7 @@
 package com.example.bloglite.service.impl;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.example.bloglite.config.UploadProperties;
 import com.example.bloglite.entity.ApiResource;
 import com.example.bloglite.entity.Role;
 import com.example.bloglite.entity.RoleResource;
@@ -32,16 +33,19 @@ public class ResourceAuthorizationServiceImpl
     private final ApiResourceMapper apiResourceMapper;
     private final RoleResourceMapper roleResourceMapper;
     private final RoleMapper roleMapper;
+    private final UploadProperties uploadProperties;
     private final AntPathMatcher antPathMatcher = new AntPathMatcher();
 
     public ResourceAuthorizationServiceImpl(
             ApiResourceMapper apiResourceMapper,
             RoleResourceMapper roleResourceMapper,
-            RoleMapper roleMapper
+            RoleMapper roleMapper,
+            UploadProperties uploadProperties
     ) {
         this.apiResourceMapper = apiResourceMapper;
         this.roleResourceMapper = roleResourceMapper;
         this.roleMapper = roleMapper;
+        this.uploadProperties = uploadProperties;
     }
 
     @Override
@@ -211,6 +215,10 @@ public class ResourceAuthorizationServiceImpl
             return false;
         }
 
+        if (isUploadedFilePath(requestUri)) {
+            return true;
+        }
+
         return requestUri.equals("/api/v1/articles")
                 || requestUri.startsWith("/api/v1/articles/")
                 || requestUri.equals("/api/v1/categories")
@@ -228,8 +236,26 @@ public class ResourceAuthorizationServiceImpl
                 || requestUri.equals("/api/v1/comments")
                 || requestUri.startsWith("/api/v1/comments/");
     }
+
     private boolean isAdminPath(String requestUri) {
         return ADMIN_PATH.equals(requestUri)
                 || requestUri.startsWith(ADMIN_PATH + "/");
+    }
+
+    private boolean isUploadedFilePath(String requestUri) {
+        String publicPath = uploadProperties.getPublicPath()
+                .trim()
+                .replace('\\', '/');
+
+        if (!publicPath.startsWith("/")) {
+            publicPath = "/" + publicPath;
+        }
+
+        while (publicPath.endsWith("/") && publicPath.length() > 1) {
+            publicPath = publicPath.substring(0, publicPath.length() - 1);
+        }
+
+        return requestUri.equals(publicPath)
+                || requestUri.startsWith(publicPath + "/");
     }
 }
