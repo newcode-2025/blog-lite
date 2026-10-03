@@ -29,6 +29,11 @@ spring:
       # 单次请求最大 20MB，供批量上传使用
       max-request-size: 20MB
 
+  # Quartz 使用内存任务存储，数据库中的 scheduled_job 是任务定义的唯一来源
+  quartz:
+    job-store-type: memory
+    auto-startup: true
+
 # MyBatis-Plus 配置
 mybatis-plus:
   # XML Mapper 文件位置
