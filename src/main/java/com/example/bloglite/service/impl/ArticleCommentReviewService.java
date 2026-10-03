@@ -10,8 +10,11 @@ import com.example.bloglite.entity.ArticleComment;
 import com.example.bloglite.enums.ArticleCommentStatus;
 import com.example.bloglite.exception.BizException;
 import com.example.bloglite.mapper.ArticleCommentMapper;
+import com.example.bloglite.service.CommentNotificationService;
 import com.example.bloglite.util.UserContext;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -19,6 +22,7 @@ import java.util.List;
 /**
  * 评论审核服务
  */
+@Slf4j
 @Service
 public class ArticleCommentReviewService {
 
@@ -39,13 +43,16 @@ public class ArticleCommentReviewService {
 
     private final ArticleCommentMapper articleCommentMapper;
     private final ArticleCommentPermissionService permissionService;
+    private final CommentNotificationService commentNotificationService;
 
     public ArticleCommentReviewService(
             ArticleCommentMapper articleCommentMapper,
-            ArticleCommentPermissionService permissionService
+            ArticleCommentPermissionService permissionService,
+            CommentNotificationService commentNotificationService
     ) {
         this.articleCommentMapper = articleCommentMapper;
         this.permissionService = permissionService;
+        this.commentNotificationService = commentNotificationService;
     }
 
     /**
@@ -112,6 +119,7 @@ public class ArticleCommentReviewService {
     /**
      * 文章作者审核单条评论
      */
+    @Transactional
     public void reviewComment(
             Long commentId,
             ReviewCommentRequest request
@@ -196,6 +204,14 @@ public class ArticleCommentReviewService {
                     "评论审核失败，请稍后重试"
             );
         }
+
+        if (affectedRows == 1 && status.equals(
+                ArticleCommentStatus.APPROVED.getCode()
+        )) {
+            comment.setStatus(status);
+            comment.setUpdatedAt(now);
+            notifyApprovedSafely(comment, article);
+        }
     }
 
     /**
@@ -223,6 +239,23 @@ public class ArticleCommentReviewService {
                 || Integer.valueOf(
                 ArticleCommentStatus.REJECTED.getCode()
         ).equals(status);
+    }
+
+    private void notifyApprovedSafely(
+            ArticleComment comment,
+            Article article
+    ) {
+        try {
+            commentNotificationService.notifyCommentApproved(
+                    comment,
+                    article
+            );
+        } catch (RuntimeException exception) {
+            log.error(
+                    "提交评论审核通知失败，commentId=" + comment.getId(),
+                    exception
+            );
+        }
     }
 
     /**

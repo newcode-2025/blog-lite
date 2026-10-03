@@ -5,11 +5,15 @@ import com.example.bloglite.dto.ArticleCommentDTO;
 import com.example.bloglite.dto.CreateCommentRequest;
 import com.example.bloglite.dto.CreateReplyRequest;
 import com.example.bloglite.dto.UserDTO;
+import com.example.bloglite.entity.Article;
 import com.example.bloglite.entity.ArticleComment;
 import com.example.bloglite.enums.ArticleCommentStatus;
 import com.example.bloglite.exception.BizException;
 import com.example.bloglite.mapper.ArticleCommentMapper;
+import com.example.bloglite.service.CommentNotificationService;
+import com.example.bloglite.service.SiteService;
 import com.example.bloglite.util.UserContext;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,6 +22,7 @@ import java.time.LocalDateTime;
 /**
  * 评论命令服务
  */
+@Slf4j
 @Service
 public class ArticleCommentCommandService {
 
@@ -39,20 +44,27 @@ public class ArticleCommentCommandService {
     private final ArticleCommentMapper articleCommentMapper;
     private final ArticleCommentPermissionService permissionService;
     private final ArticleCommentConverter commentConverter;
+    private final SiteService siteService;
+    private final CommentNotificationService commentNotificationService;
 
     public ArticleCommentCommandService(
             ArticleCommentMapper articleCommentMapper,
             ArticleCommentPermissionService permissionService,
-            ArticleCommentConverter commentConverter
+            ArticleCommentConverter commentConverter,
+            SiteService siteService,
+            CommentNotificationService commentNotificationService
     ) {
         this.articleCommentMapper = articleCommentMapper;
         this.permissionService = permissionService;
         this.commentConverter = commentConverter;
+        this.siteService = siteService;
+        this.commentNotificationService = commentNotificationService;
     }
 
     /**
      * 在指定文章下发表顶级评论
      */
+    @Transactional
     public ArticleCommentDTO createTopLevelComment(
             Long articleId,
             CreateCommentRequest request
@@ -67,7 +79,7 @@ public class ArticleCommentCommandService {
 
         String content = normalizeContent(request.getContent());
 
-        permissionService.requirePublishedArticle(
+        Article article = permissionService.requirePublishedArticle(
                 articleId,
                 "文章不存在或不可评论"
         );
@@ -83,9 +95,7 @@ public class ArticleCommentCommandService {
         articleComment.setParentId(null);
         articleComment.setReplyToUserId(null);
         articleComment.setContent(content);
-        articleComment.setStatus(
-                ArticleCommentStatus.PENDING.getCode()
-        );
+        articleComment.setStatus(resolveInitialStatus());
         articleComment.setIsDeleted(NOT_DELETED);
         articleComment.setCreatedAt(now);
         articleComment.setUpdatedAt(now);
@@ -101,12 +111,14 @@ public class ArticleCommentCommandService {
             );
         }
 
+        notifyTopLevelCommentSafely(articleComment, article);
         return commentConverter.toDTO(articleComment);
     }
 
     /**
      * 回复指定评论
      */
+    @Transactional
     public ArticleCommentDTO createReply(
             Long targetCommentId,
             CreateReplyRequest request
@@ -149,7 +161,7 @@ public class ArticleCommentCommandService {
             );
         }
 
-        permissionService.requirePublishedArticle(
+        Article article = permissionService.requirePublishedArticle(
                 rootComment.getArticleId(),
                 "文章不存在或不可评论"
         );
@@ -164,7 +176,7 @@ public class ArticleCommentCommandService {
         reply.setParentId(rootComment.getId());
         reply.setReplyToUserId(targetComment.getUserId());
         reply.setContent(content);
-        reply.setStatus(ArticleCommentStatus.PENDING.getCode());
+        reply.setStatus(resolveInitialStatus());
         reply.setIsDeleted(NOT_DELETED);
         reply.setCreatedAt(now);
         reply.setUpdatedAt(now);
@@ -178,6 +190,7 @@ public class ArticleCommentCommandService {
             );
         }
 
+        notifyReplySafely(reply, article);
         return commentConverter.toDTO(reply);
     }
 
@@ -256,6 +269,53 @@ public class ArticleCommentCommandService {
             articleCommentMapper.update(
                     null,
                     replyUpdateWrapper
+            );
+        }
+    }
+
+    /**
+     * 根据网站配置决定评论初始审核状态，配置读取失败时保持默认待审核
+     */
+    private int resolveInitialStatus() {
+        try {
+            return Integer.valueOf(1).equals(
+                    siteService.getConfig().getCommentReviewEnabled()
+            )
+                    ? ArticleCommentStatus.PENDING.getCode()
+                    : ArticleCommentStatus.APPROVED.getCode();
+        } catch (RuntimeException exception) {
+            log.warn("读取评论审核配置失败，保持默认待审核状态", exception);
+            return ArticleCommentStatus.PENDING.getCode();
+        }
+    }
+
+    private void notifyTopLevelCommentSafely(
+            ArticleComment comment,
+            Article article
+    ) {
+        try {
+            commentNotificationService.notifyTopLevelCommentCreated(
+                    comment,
+                    article
+            );
+        } catch (RuntimeException exception) {
+            log.error(
+                    "提交顶级评论通知失败，commentId=" + comment.getId(),
+                    exception
+            );
+        }
+    }
+
+    private void notifyReplySafely(
+            ArticleComment reply,
+            Article article
+    ) {
+        try {
+            commentNotificationService.notifyReplyCreated(reply, article);
+        } catch (RuntimeException exception) {
+            log.error(
+                    "提交回复通知失败，commentId=" + reply.getId(),
+                    exception
             );
         }
     }

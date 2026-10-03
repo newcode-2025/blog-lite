@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="${title}">评论通知</title>
+</head>
+<body style="margin:0;padding:24px;background:#f5f7fa;font-family:Arial,'Microsoft YaHei',sans-serif;color:#1f2937;">
+<div style="max-width:640px;margin:0 auto;background:#ffffff;border-radius:12px;padding:32px;border:1px solid #e5e7eb;">
+    <h2 style="margin-top:0;color:#2563eb;" th:text="${title}">评论通知</h2>
+    <p>你好，<span th:text="${recipientName}">用户</span>：</p>
+    <p th:text="${message}">你有一条新的评论通知。</p>
+    <div style="margin:20px 0;padding:16px;background:#f8fafc;border-left:4px solid #2563eb;border-radius:6px;">
+        <p style="margin:0 0 8px 0;color:#6b7280;">文章</p>
+        <p style="margin:0;font-weight:600;" th:text="${articleTitle}">文章标题</p>
+    </div>
+    <div style="margin:20px 0;padding:16px;background:#f8fafc;border-radius:6px;">
+        <p style="margin:0 0 8px 0;color:#6b7280;">评论内容</p>
+        <p style="margin:0;white-space:pre-wrap;" th:text="${commentContent}">评论内容</p>
+    </div>
+    <p style="font-size:13px;color:#9ca3af;">此邮件由 blog-lite 自动发送，无需直接回复。</p>
+</div>
+</body>
+</html>
