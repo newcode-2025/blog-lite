@@ -1,5 +1,6 @@
 package com.example.bloglite.controller;
 
+import com.example.bloglite.annotation.OperationLogRecord;
 import com.example.bloglite.common.ApiResponse;
 import com.example.bloglite.dto.SiteConfigDTO;
 import com.example.bloglite.dto.SiteConfigUpdateRequest;
@@ -37,6 +38,7 @@ public class AdminSiteConfigController {
     /**
      * 管理员更新网站配置
      */
+    @OperationLogRecord(module = "网站配置", action = "更新配置", description = "修改网站基础配置")
     @PutMapping
     public ApiResponse<SiteConfigDTO> updateConfig(
             @Valid @RequestBody SiteConfigUpdateRequest request
