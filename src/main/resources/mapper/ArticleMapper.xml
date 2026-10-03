@@ -308,4 +308,11 @@
                 OR t.name LIKE CONCAT('%', #{keywords}, '%')
             )
     </select>
+    <!-- 统计公开文章累计阅读量 -->
+    <select id="sumPublishedArticleViews" resultType="long">
+        SELECT COALESCE(SUM(view_count), 0)
+        FROM article
+        WHERE is_deleted = 0
+          AND status = 1
+    </select>
 </mapper>

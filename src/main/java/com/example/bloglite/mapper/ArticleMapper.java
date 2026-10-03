@@ -17,6 +17,8 @@ public interface ArticleMapper extends BaseMapper<Article> {
 
     long countPublishedArticles();
 
+    Long sumPublishedArticleViews();
+
     ArticleDetailDTO selectArticleDetailById(@Param("id") Long id);
 
     int incrementViewCount(@Param("id") Long id);
