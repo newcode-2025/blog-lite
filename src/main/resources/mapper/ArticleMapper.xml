@@ -315,4 +315,17 @@
         WHERE is_deleted = 0
           AND status = 1
     </select>
+    <!-- 查询阅读量最高的公开文章 -->
+    <select id="selectTopViewedArticles"
+            resultType="com.example.bloglite.dto.ArticleViewRankDTO">
+        SELECT
+            id,
+            title,
+            view_count AS viewCount
+        FROM article
+        WHERE is_deleted = 0
+          AND status = 1
+        ORDER BY view_count DESC, id DESC
+        LIMIT #{limit}
+    </select>
 </mapper>

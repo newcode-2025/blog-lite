@@ -3,6 +3,7 @@ package com.example.bloglite.mapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.example.bloglite.dto.ArticleCardDTO;
 import com.example.bloglite.dto.ArticleDetailDTO;
+import com.example.bloglite.dto.ArticleViewRankDTO;
 import com.example.bloglite.entity.Article;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -18,6 +19,10 @@ public interface ArticleMapper extends BaseMapper<Article> {
     long countPublishedArticles();
 
     Long sumPublishedArticleViews();
+
+    List<ArticleViewRankDTO> selectTopViewedArticles(
+            @Param("limit") int limit
+    );
 
     ArticleDetailDTO selectArticleDetailById(@Param("id") Long id);
 
