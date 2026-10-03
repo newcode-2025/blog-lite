@@ -80,7 +80,8 @@ public class SecurityConfig {
                                 "/api/v1/archives/**",
                                 "/api/v1/talks/**",
                                 "/api/v1/links/**",
-                                "/api/v1/albums/**"
+                                "/api/v1/albums/**",
+                                "/api/v1/comments/**"
                         ).permitAll()
 
                         // 其他接口交给 ResourceAuthorizationFilter 进行统一动态授权

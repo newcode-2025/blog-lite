@@ -224,7 +224,9 @@ public class ResourceAuthorizationServiceImpl
                 || requestUri.equals("/api/v1/links")
                 || requestUri.startsWith("/api/v1/links/")
                 || requestUri.equals("/api/v1/albums")
-                || requestUri.startsWith("/api/v1/albums/");
+                || requestUri.startsWith("/api/v1/albums/")
+                || requestUri.equals("/api/v1/comments")
+                || requestUri.startsWith("/api/v1/comments/");
     }
     private boolean isAdminPath(String requestUri) {
         return ADMIN_PATH.equals(requestUri)
