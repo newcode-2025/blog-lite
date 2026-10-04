@@ -9,7 +9,8 @@ spring:
   # MySQL 数据源配置
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: "jdbc:mysql://127.0.0.1:3306/blog_lite?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true"
+    # 数据库连接信息必须通过环境变量注入；本地开发时也可以直接修改这里
+    url: "${BLOG_DB_URL:jdbc:mysql://127.0.0.1:3306/blog_lite?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true}"
     username: "${BLOG_DB_USERNAME:}"
     password: "${BLOG_DB_PASSWORD:}"
 
@@ -80,8 +81,8 @@ blog:
     # JWT 签发者
     issuer: blog-lite
 
-    # 本地开发默认密钥；生产环境通过 BLOG_JWT_SECRET 环境变量覆盖
-    secret: "${BLOG_JWT_SECRET:${BLOG_JWT_SECRET:}}"
+    # JWT 密钥必须通过 BLOG_JWT_SECRET 环境变量注入
+    secret: "${BLOG_JWT_SECRET:}"
 
     # 令牌有效期，单位：分钟
     expiration-minutes: 120
@@ -94,8 +95,8 @@ blog:
 
   # 网站访问统计配置
   stats:
-    # 生产环境通过 BLOG_STATS_VISITOR_HASH_SALT 覆盖
-    visitor-hash-salt: "${BLOG_STATS_VISITOR_HASH_SALT:${BLOG_STATS_VISITOR_HASH_SALT:}}"
+    # 访客哈希盐值必须通过 BLOG_STATS_VISITOR_HASH_SALT 环境变量注入
+    visitor-hash-salt: "${BLOG_STATS_VISITOR_HASH_SALT:}"
 
   # 内置任务和日志保留配置
   tasks:

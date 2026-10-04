@@ -88,25 +88,41 @@ mysql -u your_mysql_user -p blog_lite < database/blog_lite_seed.sql
 
 脚本不包含默认管理员账号、文章和评论数据。
 
-### 3. 修改数据库连接
+### 3. 配置数据库和密钥
 
-编辑：
+项目不会提交真实的数据库账号、数据库密码、JWT 密钥和访问统计盐值。运行前必须通过环境变量配置，或者在本地修改 `src/main/resources/application.yaml`。
+
+推荐使用环境变量：
 
 ```text
-src/main/resources/application.yaml
+BLOG_DB_URL
+BLOG_DB_USERNAME
+BLOG_DB_PASSWORD
+BLOG_JWT_SECRET
+BLOG_STATS_VISITOR_HASH_SALT
 ```
 
-按本机 MySQL 环境修改：
+Linux/macOS 示例：
 
-```yaml
-spring:
-  datasource:
-    url: "jdbc:mysql://127.0.0.1:3306/blog_lite?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true"
-    username: "${BLOG_DB_USERNAME:}"
-    password: "${BLOG_DB_PASSWORD:}"
+```bash
+export BLOG_DB_URL='jdbc:mysql://127.0.0.1:3306/blog_lite?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true'
+export BLOG_DB_USERNAME='your_mysql_user'
+export BLOG_DB_PASSWORD='your_mysql_password'
+export BLOG_JWT_SECRET='replace-with-a-secret-at-least-32-bytes-long'
+export BLOG_STATS_VISITOR_HASH_SALT='replace-with-a-random-salt'
 ```
 
-生产或公开环境不要直接使用默认密码和默认 JWT 密钥。
+Windows PowerShell 示例：
+
+```powershell
+$env:BLOG_DB_URL='jdbc:mysql://127.0.0.1:3306/blog_lite?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true'
+$env:BLOG_DB_USERNAME='your_mysql_user'
+$env:BLOG_DB_PASSWORD='your_mysql_password'
+$env:BLOG_JWT_SECRET='replace-with-a-secret-at-least-32-bytes-long'
+$env:BLOG_STATS_VISITOR_HASH_SALT='replace-with-a-random-salt'
+```
+
+也可以在本地修改 `src/main/resources/application.yaml`，但不要把真实账号、密码或密钥提交到 Git。
 
 ### 4. 编译项目
 
@@ -199,6 +215,9 @@ POST /api/v1/auth/login
 
 | 环境变量 | 作用 |
 |---|---|
+| `BLOG_DB_URL` | MySQL JDBC 地址 |
+| `BLOG_DB_USERNAME` | MySQL 用户名 |
+| `BLOG_DB_PASSWORD` | MySQL 密码 |
 | `BLOG_JWT_SECRET` | JWT 签名密钥 |
 | `BLOG_STATS_VISITOR_HASH_SALT` | 访问统计访客哈希盐值 |
 | `BLOG_MAIL_ENABLED` | 是否启用邮件 |
